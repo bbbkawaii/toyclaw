@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import type { JSX } from "react";
-import { toImageAssetStatusLabel } from "../shared/i18n/labels";
 import { StepRail } from "../shared/ui/StepRail";
 import { useWorkflowStore, type WorkflowStep } from "../store/workflow-store";
 import { LinearWorkflowPage } from "./LinearWorkflowPage";
@@ -20,21 +19,21 @@ export function WorkspaceLayout(): JSX.Element {
     {
       key: "image-input" as const,
       label: "图像输入",
-      description: "上传原始玩具图并解析视觉特征",
+      description: "上传并解析",
       enabled: true,
       done: Boolean(state.imageResult),
     },
     {
       key: "cross-cultural" as const,
       label: "跨文化分析",
-      description: "目标市场 + 禁忌/节日/竞品匹配",
+      description: "市场分析",
       enabled: Boolean(state.requestId),
       done: Boolean(state.crossCulturalResult),
     },
     {
       key: "redesign" as const,
       label: "改款建议",
-      description: "颜色/造型/包装 + 智能资产预览",
+      description: "改款输出",
       enabled: Boolean(state.requestId && state.analysisId),
       done: Boolean(state.redesignResult),
     },
@@ -70,9 +69,7 @@ export function WorkspaceLayout(): JSX.Element {
         <div>
           <p className={styles.eyebrow}>玩具出海智能助手</p>
           <h1 className="neon-title">全球玩具改款实验室</h1>
-          <p className={`muted ${styles.subline}`}>
-            从原始玩具图到跨文化合规与改款建议，三步完成出海方案。
-          </p>
+          <p className={`muted ${styles.subline}`}>线性三步，自动衔接。</p>
         </div>
         <button className={styles.resetButton} type="button" onClick={handleReset}>
           重新开始
@@ -95,7 +92,7 @@ export function WorkspaceLayout(): JSX.Element {
 
         <aside className={styles.summary}>
           <section className={styles.summaryPanel}>
-            <h3 className={styles.summaryTitle}>会话摘要</h3>
+            <h3 className={styles.summaryTitle}>流程状态</h3>
             <dl className={styles.metaList}>
               <div>
                 <dt>请求编号</dt>
@@ -110,26 +107,6 @@ export function WorkspaceLayout(): JSX.Element {
                 <dd>{state.suggestionId ? "已创建" : "未创建"}</dd>
               </div>
             </dl>
-            <ul className={styles.statList}>
-              <li>
-                颜色方案:
-                <strong>{state.redesignResult?.colorSchemes.length ?? 0}</strong>
-              </li>
-              <li>
-                禁忌命中:
-                <strong>
-                  {state.crossCulturalResult?.tabooFindings.filter((item) => item.matched).length ?? 0}
-                </strong>
-              </li>
-              <li>
-                预览图状态:
-                <strong>
-                  {state.redesignResult
-                    ? toImageAssetStatusLabel(state.redesignResult.assets.previewImage.status)
-                    : "暂无"}
-                </strong>
-              </li>
-            </ul>
           </section>
         </aside>
       </div>

@@ -23,9 +23,121 @@
   gap: 8px;
 }
 
+.summaryGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summaryCard {
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  background: color-mix(in srgb, var(--panel) 64%, transparent);
+  padding: 10px;
+  display: grid;
+  gap: 3px;
+}
+
+.summaryLabel {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.summaryCard strong {
+  font-size: 0.95rem;
+}
+
+.summaryMeta {
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+}
+
+.details {
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 48%, transparent);
+  background: color-mix(in srgb, var(--panel) 48%, transparent);
+  overflow: hidden;
+}
+
+.detailsSummary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  list-style: none;
+}
+
+.detailsSummary::-webkit-details-marker {
+  display: none;
+}
+
+.detailsSummary::after {
+  content: "▾";
+  float: right;
+  opacity: 0.7;
+}
+
+.details[open] .detailsSummary::after {
+  content: "▴";
+}
+
+.detailsBody {
+  border-top: 1px solid color-mix(in srgb, var(--line) 38%, transparent);
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.detailsSection {
+  display: grid;
+  gap: 6px;
+}
+
+.detailsSection h4 {
+  margin: 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.compactList {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.86rem;
+}
+
+.inlineMeta {
+  margin-top: 2px;
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+
+.assetGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .assetImage {
   margin-top: 8px;
   width: 100%;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--line) 44%, transparent);
+}
+
+@media (max-width: 900px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .assetGrid {
+    grid-template-columns: 1fr;
+  }
 }

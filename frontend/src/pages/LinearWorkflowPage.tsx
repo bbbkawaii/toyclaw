@@ -6,29 +6,18 @@ import { z } from "zod";
 import { ApiError, type ApiError as ApiErrorType, toApiError } from "../shared/api/errors";
 import { postCrossCulturalAnalyze, postImageAnalyze, postRedesignSuggest } from "../shared/api/toyclaw";
 import {
-  toZhAssetPrompt,
   toZhAssetReason,
   toZhColorName,
   toZhColorUsage,
   toZhCompetitorArchetype,
   toZhCompetitorOpportunities,
-  toZhCompetitorSummary,
-  toZhCopyTone,
   toZhFeatureTerm,
   toZhFestivalElements,
   toZhFestivalName,
-  toZhFestivalReason,
-  toZhPackagingReason,
   toZhPackagingStyleName,
-  toZhPackagingVisual,
   toZhSchemeName,
-  toZhSchemeReason,
   toZhShapeAction,
-  toZhShapeReason,
   toZhShapeTitle,
-  toZhShowcaseScript,
-  toZhTabooRecommendation,
-  toZhTabooRisk,
   toZhTabooTitle,
   toZhText,
 } from "../shared/i18n/content";
@@ -48,9 +37,9 @@ const STEP_SECTION_ID = {
 } as const;
 
 const directionPresetLabels: Record<DirectionPreset, string> = {
-  CHANGE_COLOR: "换个色号",
-  SEASONAL_THEME: "蹭个节日",
-  ADD_ACCESSORY: "加个小配件",
+  CHANGE_COLOR: "换色",
+  SEASONAL_THEME: "节日",
+  ADD_ACCESSORY: "配件",
 };
 
 const marketLabels: Record<TargetMarket, string> = {
@@ -64,7 +53,7 @@ const marketLabels: Record<TargetMarket, string> = {
 const imageFormSchema = z
   .object({
     image: z.custom<FileList>((value) => value instanceof FileList && value.length > 0, {
-      message: "请上传玩具图片",
+      message: "请上传图片",
     }),
     directionMode: z.enum(["TEXT", "PRESET"]),
     directionText: z.string().optional(),
@@ -75,14 +64,14 @@ const imageFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["directionText"],
-        message: "请输入改款方向建议",
+        message: "请输入改款方向",
       });
     }
     if (value.directionMode === "PRESET" && !value.directionPreset) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["directionPreset"],
-        message: "请选择预设方向",
+        message: "请选择预设",
       });
     }
   });
@@ -173,7 +162,7 @@ export function LinearWorkflowPage(): JSX.Element {
     if (!requestId || !analysisId) {
       setRedesignError(
         new ApiError({
-          message: "缺少请求编号或分析编号，请先完成前两个模块。",
+          message: "缺少依赖编号",
           code: "MISSING_DEPENDENCY_ID",
         }),
       );
@@ -269,7 +258,7 @@ export function LinearWorkflowPage(): JSX.Element {
     if (!requestId) {
       setCrossError(
         new ApiError({
-          message: "缺少请求编号，请先完成图像输入模块。",
+          message: "请先完成第一步",
           code: "MISSING_REQUEST_ID",
         }),
       );
@@ -301,18 +290,21 @@ export function LinearWorkflowPage(): JSX.Element {
   const crossResult = crossCulturalResult;
   const redesign = redesignResult;
 
+  const tabooHitCount = crossResult?.tabooFindings.filter((item) => item.matched).length ?? 0;
+  const topTheme = crossResult?.festivalThemes[0];
+  const topCompetitor = crossResult?.competitorStyles[0];
+
+  const highPriorityCount = redesign?.shapeAdjustments.filter((item) => item.priority === "HIGH").length ?? 0;
+  const previewStatus = redesign ? toImageAssetStatusLabel(redesign.assets.previewImage.status) : "暂无";
+
   return (
     <motion.div className={commonStyles.stack} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <section id={STEP_SECTION_ID["image-input"]} className={styles.sectionAnchor}>
-        <SurfacePanel
-          title="第一步：图像输入模块"
-          subtitle="上传原始玩具图片，并提供改款方向（文本或预设）"
-          rightSlot={<span className="pill">Step 01</span>}
-        >
+        <SurfacePanel title="第一步：输入" rightSlot={<span className="pill">Step 01</span>}>
           <form className={commonStyles.form} onSubmit={onSubmitImage}>
             <div className={commonStyles.field}>
               <label className={commonStyles.label} htmlFor="image-file">
-                玩具图片
+                图片
               </label>
               <input
                 id="image-file"
@@ -321,7 +313,7 @@ export function LinearWorkflowPage(): JSX.Element {
                 accept="image/jpeg,image/png,image/webp"
                 {...imageForm.register("image")}
               />
-              <span className={commonStyles.hint}>支持 jpg/png/webp，文件大小不超过 10MB。</span>
+              <span className={commonStyles.hint}>jpg/png/webp · ≤10MB</span>
               {imageForm.formState.errors.image ? (
                 <span className={commonStyles.hint} style={{ color: "var(--danger)" }}>
                   {imageForm.formState.errors.image.message}
@@ -331,21 +323,21 @@ export function LinearWorkflowPage(): JSX.Element {
 
             {previewUrl ? (
               <div className={commonStyles.field}>
-                <span className={commonStyles.label}>图片预览</span>
+                <span className={commonStyles.label}>预览</span>
                 <img src={previewUrl} alt="上传预览" className={styles.previewImage} />
               </div>
             ) : null}
 
             <div className={commonStyles.field}>
-              <span className={commonStyles.label}>改款方向输入</span>
+              <span className={commonStyles.label}>方向</span>
               <div className={commonStyles.radioRow}>
                 <label className={commonStyles.radioItem}>
                   <input type="radio" value="TEXT" {...imageForm.register("directionMode")} />
-                  文本建议
+                  文本
                 </label>
                 <label className={commonStyles.radioItem}>
                   <input type="radio" value="PRESET" {...imageForm.register("directionMode")} />
-                  预设模板
+                  预设
                 </label>
               </div>
             </div>
@@ -353,12 +345,12 @@ export function LinearWorkflowPage(): JSX.Element {
             {directionMode === "TEXT" ? (
               <div className={commonStyles.field}>
                 <label className={commonStyles.label} htmlFor="direction-text">
-                  文本建议
+                  文本方向
                 </label>
                 <textarea
                   id="direction-text"
                   className={commonStyles.textarea}
-                  placeholder="例如：改成中东节日礼盒版，加入金色点缀和可拆灯笼挂饰"
+                  placeholder="例如：节日礼盒版，金色点缀"
                   {...imageForm.register("directionText")}
                 />
                 {imageForm.formState.errors.directionText ? (
@@ -385,74 +377,81 @@ export function LinearWorkflowPage(): JSX.Element {
             <InlineError error={imageError} />
             <div className={commonStyles.buttonRow}>
               <button className={commonStyles.buttonPrimary} type="submit" disabled={isSubmittingImage}>
-                {isSubmittingImage ? "解析中..." : "提交并解析图像"}
+                {isSubmittingImage ? "解析中..." : "开始解析"}
               </button>
-              {isSubmittingImage ? <LoadingPulse label="智能模型正在提取形状/颜色/材质/风格" /> : null}
+              {isSubmittingImage ? <LoadingPulse label="解析中..." /> : null}
             </div>
           </form>
         </SurfacePanel>
 
-        <SurfacePanel
-          title="图像特征解析"
-          subtitle="形状 / 颜色 / 材质 / 风格"
-          rightSlot={<span className="pill">视觉分析</span>}
-        >
+        <SurfacePanel title="第一步结果">
           {featureSummary ? (
-            <div className={commonStyles.split}>
-              <div className={commonStyles.metricGrid}>
-                <article className={commonStyles.metricCard}>
-                  <h4>形状</h4>
-                  <p>
-                    {toZhFeatureTerm(featureSummary.shape.category)} ·{" "}
-                    <strong>{Math.round(featureSummary.shape.confidence * 100)}%</strong>
-                  </p>
+            <>
+              <div className={styles.summaryGrid}>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>形状</span>
+                  <strong>{toZhFeatureTerm(featureSummary.shape.category)}</strong>
+                  <span className={styles.summaryMeta}>{Math.round(featureSummary.shape.confidence * 100)}%</span>
                 </article>
-                <article className={commonStyles.metricCard}>
-                  <h4>材质</h4>
-                  <ul className={commonStyles.list}>
-                    {featureSummary.material.map((item) => (
-                      <li key={item.name}>
-                        {toZhFeatureTerm(item.name)} ({Math.round(item.confidence * 100)}%)
-                      </li>
-                    ))}
-                  </ul>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>主色</span>
+                  <strong>{toZhColorName(featureSummary.colors[0]?.name ?? "未知")}</strong>
+                  <span className={styles.summaryMeta}>{featureSummary.colors.length} 色</span>
                 </article>
-                <article className={commonStyles.metricCard}>
-                  <h4>风格</h4>
-                  <ul className={commonStyles.list}>
-                    {featureSummary.style.map((item) => (
-                      <li key={item.name}>
-                        {toZhFeatureTerm(item.name)} ({Math.round(item.confidence * 100)}%)
-                      </li>
-                    ))}
-                  </ul>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>风格/材质</span>
+                  <strong>
+                    {featureSummary.style.length}/{featureSummary.material.length}
+                  </strong>
+                  <span className={styles.summaryMeta}>条目数</span>
                 </article>
               </div>
 
-              <article className={commonStyles.metricCard}>
-                <h4>颜色分布</h4>
-                <div className={commonStyles.metricGrid}>
-                  {featureSummary.colors.map((color) => (
-                    <p className={commonStyles.colorLine} key={`${color.name}-${color.hex}`}>
-                      <span className={commonStyles.colorSwatch} style={{ backgroundColor: color.hex }} />
-                      {toZhColorName(color.name)} · 占比 {Math.round(color.proportion * 100)}%
-                    </p>
-                  ))}
+              <details className={styles.details}>
+                <summary className={styles.detailsSummary}>查看明细</summary>
+                <div className={styles.detailsBody}>
+                  <section className={styles.detailsSection}>
+                    <h4>颜色</h4>
+                    <div className={commonStyles.metricGrid}>
+                      {featureSummary.colors.map((color) => (
+                        <p className={commonStyles.colorLine} key={`${color.name}-${color.hex}`}>
+                          <span className={commonStyles.colorSwatch} style={{ backgroundColor: color.hex }} />
+                          {toZhColorName(color.name)} · {Math.round(color.proportion * 100)}%
+                        </p>
+                      ))}
+                    </div>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>材质</h4>
+                    <ul className={commonStyles.list}>
+                      {featureSummary.material.map((item) => (
+                        <li key={item.name}>
+                          {toZhFeatureTerm(item.name)} ({Math.round(item.confidence * 100)}%)
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>风格</h4>
+                    <ul className={commonStyles.list}>
+                      {featureSummary.style.map((item) => (
+                        <li key={item.name}>
+                          {toZhFeatureTerm(item.name)} ({Math.round(item.confidence * 100)}%)
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 </div>
-              </article>
-            </div>
+              </details>
+            </>
           ) : (
-            <p className="muted">暂无解析结果。完成上传后会自动展示第一步提取的核心特征。</p>
+            <p className="muted">等待解析结果</p>
           )}
         </SurfacePanel>
       </section>
 
       <section id={STEP_SECTION_ID["cross-cultural"]} className={styles.sectionAnchor}>
-        <SurfacePanel
-          title="第二步：跨文化分析模块"
-          subtitle="目标市场选择 + 文化禁忌检测 + 节日/热点 + 竞品风格参考"
-          rightSlot={<span className="pill">Step 02</span>}
-        >
+        <SurfacePanel title="第二步：市场分析" rightSlot={<span className="pill">Step 02</span>}>
           <form className={commonStyles.form} onSubmit={onSubmitCrossCultural}>
             <div className={commonStyles.field}>
               <label className={commonStyles.label} htmlFor="target-market">
@@ -467,205 +466,197 @@ export function LinearWorkflowPage(): JSX.Element {
               </select>
             </div>
 
-            {!requestId ? (
-              <div className={styles.stepBanner}>完成第一步后解锁本步骤。</div>
-            ) : (
-              <p className={commonStyles.hint}>请求编号已就绪，提交后会自动进入第三步生成。</p>
-            )}
+            {!requestId ? <div className={styles.stepBanner}>先完成第一步</div> : null}
 
             <InlineError error={crossError} />
             <div className={commonStyles.buttonRow}>
               <button className={commonStyles.buttonPrimary} type="submit" disabled={isSubmittingCross || !requestId}>
-                {isSubmittingCross ? "分析中..." : "生成跨文化分析"}
+                {isSubmittingCross ? "分析中..." : "开始分析"}
               </button>
-              {isSubmittingCross ? <LoadingPulse label="正在检索禁忌/节日/竞品风格..." /> : null}
+              {isSubmittingCross ? <LoadingPulse label="分析中..." /> : null}
             </div>
           </form>
         </SurfacePanel>
 
-        <div className={commonStyles.split}>
-          <SurfacePanel title="文化禁忌检测" subtitle="优先处理命中的高风险项">
-            {crossResult ? (
-              <div className={commonStyles.metricGrid}>
-                {crossResult.tabooFindings.map((item) => (
-                  <article key={item.ruleId} className={commonStyles.metricCard}>
-                    <h4>
-                      [{toLevelLabel(item.severity)}] {toZhTabooTitle(item.ruleId, item.title)}
-                    </h4>
-                    <p>
-                      命中: <strong>{item.matched ? "是" : "否"}</strong>
-                    </p>
-                    <p className={commonStyles.hint}>风险: {toZhTabooRisk(item.matched, item.risk)}</p>
-                    <p className={commonStyles.hint}>建议: {toZhTabooRecommendation(item.matched, item.recommendation)}</p>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">暂无结果。完成第二步后显示文化禁忌命中情况。</p>
-            )}
-          </SurfacePanel>
-
-          <SurfacePanel title="节日/热点主题匹配" subtitle="优先对接高相关度活动主题">
-            {crossResult ? (
-              <div className={commonStyles.metricGrid}>
-                {crossResult.festivalThemes.map((item) => (
-                  <article key={item.themeId} className={commonStyles.metricCard}>
-                    <h4>
-                      {toZhFestivalName(item.themeId, item.name)} · {Math.round(item.relevance * 100)}%
-                    </h4>
-                    <p className={commonStyles.hint}>{toZhFestivalReason(item.relevance)}</p>
-                    <ul className={commonStyles.list}>
-                      {toZhFestivalElements(item.themeId, item.suggestedElements)
-                        .slice(0, 3)
-                        .map((it) => (
-                          <li key={it}>{it}</li>
-                        ))}
-                    </ul>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">暂无节日主题匹配。</p>
-            )}
-          </SurfacePanel>
-        </div>
-
-        <SurfacePanel title="竞品风格参考" subtitle="对齐优势，避免同质化">
+        <SurfacePanel title="第二步结果">
           {crossResult ? (
-            <div className={commonStyles.metricGrid}>
-              {crossResult.competitorStyles.map((item) => (
-                <article key={item.referenceId} className={commonStyles.metricCard}>
-                  <h4>
-                    {toZhCompetitorArchetype(item.referenceId, item.brandArchetype)} ·{" "}
-                    {Math.round(item.matchingScore * 100)}%
-                  </h4>
-                  <p>{toZhCompetitorSummary(item.styleSummary)}</p>
-                  <ul className={commonStyles.list}>
-                    {toZhCompetitorOpportunities(item.opportunities).map((opportunity) => (
-                      <li key={opportunity}>{opportunity}</li>
-                    ))}
-                  </ul>
+            <>
+              <div className={styles.summaryGrid}>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>禁忌命中</span>
+                  <strong>{tabooHitCount}</strong>
+                  <span className={styles.summaryMeta}>项</span>
                 </article>
-              ))}
-            </div>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>Top 主题</span>
+                  <strong>{topTheme ? toZhFestivalName(topTheme.themeId, topTheme.name) : "暂无"}</strong>
+                  <span className={styles.summaryMeta}>
+                    {topTheme ? `${Math.round(topTheme.relevance * 100)}%` : "-"}
+                  </span>
+                </article>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>Top 竞品</span>
+                  <strong>
+                    {topCompetitor
+                      ? toZhCompetitorArchetype(topCompetitor.referenceId, topCompetitor.brandArchetype)
+                      : "暂无"}
+                  </strong>
+                  <span className={styles.summaryMeta}>
+                    {topCompetitor ? `${Math.round(topCompetitor.matchingScore * 100)}%` : "-"}
+                  </span>
+                </article>
+              </div>
+
+              <details className={styles.details}>
+                <summary className={styles.detailsSummary}>查看明细</summary>
+                <div className={styles.detailsBody}>
+                  <section className={styles.detailsSection}>
+                    <h4>禁忌项</h4>
+                    <ul className={styles.compactList}>
+                      {crossResult.tabooFindings.map((item) => (
+                        <li key={item.ruleId}>
+                          [{toLevelLabel(item.severity)}] {toZhTabooTitle(item.ruleId, item.title)} ·{" "}
+                          {item.matched ? "命中" : "未命中"}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>节日匹配</h4>
+                    <ul className={styles.compactList}>
+                      {crossResult.festivalThemes.map((item) => (
+                        <li key={item.themeId}>
+                          {toZhFestivalName(item.themeId, item.name)} · {Math.round(item.relevance * 100)}%
+                          <span className={styles.inlineMeta}>
+                            {toZhFestivalElements(item.themeId, item.suggestedElements).slice(0, 2).join(" / ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>竞品参考</h4>
+                    <ul className={styles.compactList}>
+                      {crossResult.competitorStyles.map((item) => (
+                        <li key={item.referenceId}>
+                          {toZhCompetitorArchetype(item.referenceId, item.brandArchetype)} ·{" "}
+                          {Math.round(item.matchingScore * 100)}%
+                          <span className={styles.inlineMeta}>
+                            {toZhCompetitorOpportunities(item.opportunities).slice(0, 2).join(" / ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                </div>
+              </details>
+            </>
           ) : (
-            <p className="muted">暂无竞品风格参考。</p>
+            <p className="muted">等待分析结果</p>
           )}
         </SurfacePanel>
       </section>
 
       <section id={STEP_SECTION_ID.redesign} className={styles.sectionAnchor}>
-        <SurfacePanel
-          title="第三步：改款建议模块"
-          subtitle="第二步完成后自动生成颜色方案 / 造型细节 / 包装风格 / 智能效果图"
-          rightSlot={<span className="pill">Step 03 · Auto</span>}
-        >
+        <SurfacePanel title="第三步：改款输出" rightSlot={<span className="pill">Step 03 · Auto</span>}>
           <div className={styles.statusWrap}>
-            {!analysisId ? <div className={styles.stepBanner}>完成第二步后自动触发第三步。</div> : null}
-            {analysisId && isGeneratingRedesign ? (
-              <LoadingPulse label="正在自动生成颜色/造型/包装/效果图..." />
-            ) : null}
+            {!analysisId ? <div className={styles.stepBanner}>等待第二步完成</div> : null}
+            {analysisId && isGeneratingRedesign ? <LoadingPulse label="生成中..." /> : null}
             <InlineError error={redesignError} />
             {analysisId && redesignError ? (
               <div className={commonStyles.buttonRow}>
                 <button className={commonStyles.buttonGhost} type="button" onClick={() => void runRedesignGeneration()}>
-                  重试生成改款建议
+                  重试
                 </button>
               </div>
             ) : null}
           </div>
         </SurfacePanel>
 
-        <div className={commonStyles.split}>
-          <SurfacePanel title="颜色方案建议" subtitle="保留识别度并强化市场适配">
-            {redesign ? (
-              <div className={commonStyles.metricGrid}>
-                {redesign.colorSchemes.map((scheme) => (
-                  <article key={scheme.schemeName} className={commonStyles.metricCard}>
-                    <h4>
-                      {toZhSchemeName(scheme.schemeName)} · {toZhText(scheme.positioning, "本地化定位")}
-                    </h4>
-                    <p className={commonStyles.hint}>{toZhSchemeReason(scheme.reason)}</p>
-                    <div className={commonStyles.metricGrid}>
-                      {scheme.colors.map((color) => (
-                        <p key={`${scheme.schemeName}-${color.hex}-${color.usage}`} className={commonStyles.colorLine}>
-                          <span className={commonStyles.colorSwatch} style={{ backgroundColor: color.hex }} />
-                          {toZhColorName(color.name)}（{toZhColorUsage(color.usage)}）
-                        </p>
-                      ))}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">暂无颜色方案建议。</p>
-            )}
-          </SurfacePanel>
-
-          <SurfacePanel title="造型 / 细节调整建议" subtitle="优先落地高优先级动作">
-            {redesign ? (
-              <div className={commonStyles.metricGrid}>
-                {redesign.shapeAdjustments.map((item) => (
-                  <article key={item.title} className={commonStyles.metricCard}>
-                    <h4>
-                      [{toLevelLabel(item.priority)}] {toZhShapeTitle(item.title)}
-                    </h4>
-                    <p className={commonStyles.hint}>{toZhShapeReason(item.reason)}</p>
-                    <ul className={commonStyles.list}>
-                      {item.actions.map((action) => (
-                        <li key={action}>{toZhShapeAction(action)}</li>
-                      ))}
-                    </ul>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">暂无造型与细节建议。</p>
-            )}
-          </SurfacePanel>
-        </div>
-
-        <div className={commonStyles.split}>
-          <SurfacePanel title="包装风格建议" subtitle="面向目标市场的陈列与文案语气">
-            {redesign ? (
-              <div className={commonStyles.metricGrid}>
-                {redesign.packagingSuggestions.map((item) => (
-                  <article key={item.styleName} className={commonStyles.metricCard}>
-                    <h4>{toZhPackagingStyleName(item.styleName)}</h4>
-                    <p className={commonStyles.hint}>{toZhPackagingReason(item.reason)}</p>
-                    <p className={commonStyles.hint}>语气: {toZhCopyTone(item.copyTone)}</p>
-                    <ul className={commonStyles.list}>
-                      {item.visualElements.map((visual) => (
-                        <li key={visual}>{toZhPackagingVisual(visual)}</li>
-                      ))}
-                    </ul>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">暂无包装建议。</p>
-            )}
-          </SurfacePanel>
-
-          <SurfacePanel title="智能效果图生成" subtitle="改款预览图 + 三视图 + 展示视频脚本">
-            {redesign ? (
-              <div className={commonStyles.metricGrid}>
-                <RenderImageAsset title="改款预览图" asset={redesign.assets.previewImage} />
-                <RenderImageAsset title="三视图 · 正视图" asset={redesign.assets.threeView.front} />
-                <RenderImageAsset title="三视图 · 侧视图" asset={redesign.assets.threeView.side} />
-                <RenderImageAsset title="三视图 · 背视图" asset={redesign.assets.threeView.back} />
-
-                <article className={commonStyles.metricCard}>
-                  <h4>展示视频脚本（{toShowcaseVideoStatusLabel(redesign.assets.showcaseVideo.status)}）</h4>
-                  <p>{toZhShowcaseScript()}</p>
-                  <p className={commonStyles.hint}>当前版本不生成关键帧，仅输出视频脚本。</p>
+        <SurfacePanel title="第三步结果">
+          {redesign ? (
+            <>
+              <div className={styles.summaryGrid}>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>配色方案</span>
+                  <strong>{redesign.colorSchemes.length}</strong>
+                  <span className={styles.summaryMeta}>组</span>
+                </article>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>高优动作</span>
+                  <strong>{highPriorityCount}</strong>
+                  <span className={styles.summaryMeta}>项</span>
+                </article>
+                <article className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>预览图状态</span>
+                  <strong>{previewStatus}</strong>
+                  <span className={styles.summaryMeta}>自动生成</span>
                 </article>
               </div>
-            ) : (
-              <p className="muted">暂无智能资产结果。</p>
-            )}
-          </SurfacePanel>
-        </div>
+
+              <details className={styles.details}>
+                <summary className={styles.detailsSummary}>查看明细</summary>
+                <div className={styles.detailsBody}>
+                  <section className={styles.detailsSection}>
+                    <h4>颜色方案</h4>
+                    <ul className={styles.compactList}>
+                      {redesign.colorSchemes.map((scheme) => (
+                        <li key={scheme.schemeName}>
+                          {toZhSchemeName(scheme.schemeName)} · {toZhText(scheme.positioning, "本地化定位")}
+                          <span className={styles.inlineMeta}>
+                            {scheme.colors
+                              .map((color) => `${toZhColorName(color.name)}(${toZhColorUsage(color.usage)})`)
+                              .join(" / ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>造型调整</h4>
+                    <ul className={styles.compactList}>
+                      {redesign.shapeAdjustments.map((item) => (
+                        <li key={item.title}>
+                          [{toLevelLabel(item.priority)}] {toZhShapeTitle(item.title)}
+                          <span className={styles.inlineMeta}>
+                            {item.actions.slice(0, 2).map((action) => toZhShapeAction(action)).join(" / ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>包装建议</h4>
+                    <ul className={styles.compactList}>
+                      {redesign.packagingSuggestions.map((item) => (
+                        <li key={item.styleName}>
+                          {toZhPackagingStyleName(item.styleName)}
+                          <span className={styles.inlineMeta}>
+                            {item.visualElements.slice(0, 2).join(" / ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>智能资产</h4>
+                    <div className={styles.assetGrid}>
+                      <RenderImageAsset title="预览图" asset={redesign.assets.previewImage} />
+                      <RenderImageAsset title="正视图" asset={redesign.assets.threeView.front} />
+                      <RenderImageAsset title="侧视图" asset={redesign.assets.threeView.side} />
+                      <RenderImageAsset title="背视图" asset={redesign.assets.threeView.back} />
+                    </div>
+                    <p className={commonStyles.hint}>
+                      展示脚本：{toShowcaseVideoStatusLabel(redesign.assets.showcaseVideo.status)}
+                    </p>
+                  </section>
+                </div>
+              </details>
+            </>
+          ) : (
+            <p className="muted">等待输出结果</p>
+          )}
+        </SurfacePanel>
       </section>
     </motion.div>
   );
@@ -679,15 +670,12 @@ function RenderImageAsset({ title, asset }: { title: string; asset: ImageAssetRe
 
   return (
     <article className={commonStyles.metricCard}>
-      <h4>
-        {title} · {toImageAssetStatusLabel(asset.status)}
-      </h4>
-      <p className={commonStyles.hint}>生成提示词: {toZhAssetPrompt()}</p>
-      {imageSrc ? (
-        <img src={imageSrc} alt={title} className={styles.assetImage} />
-      ) : (
-        <p className={commonStyles.hint}>未生成图片: {toZhAssetReason(asset.reason)}</p>
-      )}
+      <h4>{title}</h4>
+      <p className={commonStyles.hint}>{toImageAssetStatusLabel(asset.status)}</p>
+      {imageSrc ? <img src={imageSrc} alt={title} className={styles.assetImage} /> : null}
+      {!imageSrc && asset.reason ? (
+        <p className={commonStyles.hint}>原因：{toZhAssetReason(asset.reason)}</p>
+      ) : null}
     </article>
   );
 }
