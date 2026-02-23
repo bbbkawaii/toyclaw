@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum DirectionMode {
+  TEXT
+  PRESET
+}
+
+enum RequestStatus {
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum TargetMarket {
+  US
+  EUROPE
+  MIDDLE_EAST
+  SOUTHEAST_ASIA
+  JAPAN_KOREA
+}
+
+model AnalysisRequest {
+  id               String         @id @default(uuid())
+  imagePath        String
+  originalFilename String
+  mimeType         String
+  sizeBytes        Int
+  directionMode    DirectionMode
+  directionValue   String
+  provider         String
+  modelName        String
+  status           RequestStatus
+  errorCode        String?
+  errorMessage     String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  result           AnalysisResult?
+  crossCultural    CrossCulturalAnalysis[]
+  redesigns        RedesignSuggestion[]
+}
+
+model AnalysisResult {
+  id             String          @id @default(uuid())
+  requestId      String          @unique
+  shape          Json
+  colors         Json
+  material       Json
+  style          Json
+  rawModelOutput Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  request        AnalysisRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model CrossCulturalAnalysis {
+  id               String             @id @default(uuid())
+  requestId        String
+  targetMarket     TargetMarket
+  tabooFindings    Json
+  festivalThemes   Json
+  competitorStyles Json
+  summary          String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  request          AnalysisRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  redesigns        RedesignSuggestion[]
+
+  @@index([requestId, targetMarket])
+}
+
+model RedesignSuggestion {
+  id                     String               @id @default(uuid())
+  requestId              String
+  crossCulturalAnalysisId String
+  targetMarket           TargetMarket
+  colorSchemes           Json
+  shapeAdjustments       Json
+  packagingSuggestions   Json
+  assets                 Json
+  assetProvider          String?
+  assetModelName         String?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  request                AnalysisRequest      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  crossCulturalAnalysis  CrossCulturalAnalysis @relation(fields: [crossCulturalAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([crossCulturalAnalysisId])
+}
