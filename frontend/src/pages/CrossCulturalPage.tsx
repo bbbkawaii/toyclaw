@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { ApiError, type ApiError as ApiErrorType, toApiError } from "../shared/api/errors";
+import { toLevelLabel } from "../shared/i18n/labels";
 import { postCrossCulturalAnalyze } from "../shared/api/toyclaw";
 import { TARGET_MARKETS, type TargetMarket } from "../shared/types/api";
 import { InlineError } from "../shared/ui/InlineError";
@@ -45,7 +46,7 @@ export function CrossCulturalPage(): JSX.Element {
     if (!workflow.requestId) {
       setError(
         new ApiError({
-          message: "缺少 requestId，请先完成图像输入模块。",
+          message: "缺少请求编号，请先完成图像输入模块。",
           code: "MISSING_REQUEST_ID",
         }),
       );
@@ -76,7 +77,7 @@ export function CrossCulturalPage(): JSX.Element {
       <SurfacePanel
         title="跨文化分析模块"
         subtitle="目标市场选择 + 文化禁忌检测 + 节日/热点 + 竞品风格参考"
-        rightSlot={<span className="pill">step 02</span>}
+        rightSlot={<span className="pill">第 02 步</span>}
       >
         <form className={commonStyles.form} onSubmit={onSubmit}>
           <div className={commonStyles.field}>
@@ -94,11 +95,11 @@ export function CrossCulturalPage(): JSX.Element {
 
           {!workflow.requestId ? (
             <p className={commonStyles.hint} style={{ color: "var(--danger)" }}>
-              还没有 requestId，请先返回「图像输入模块」完成上传。
+              还没有请求编号，请先返回「图像输入模块」完成上传。
             </p>
           ) : (
             <p className={commonStyles.hint}>
-              当前 requestId: <span className="kbd">{workflow.requestId}</span>
+              当前请求编号: <span className="kbd">{workflow.requestId}</span>
             </p>
           )}
 
@@ -126,7 +127,7 @@ export function CrossCulturalPage(): JSX.Element {
               {result.tabooFindings.map((item) => (
                 <article key={item.ruleId} className={commonStyles.metricCard}>
                   <h4>
-                    [{item.severity}] {item.title}
+                    [{toLevelLabel(item.severity)}] {item.title}
                   </h4>
                   <p>
                     命中: <strong>{item.matched ? "是" : "否"}</strong>
@@ -141,7 +142,7 @@ export function CrossCulturalPage(): JSX.Element {
           )}
         </SurfacePanel>
 
-        <SurfacePanel title="节日/热点主题匹配" subtitle="优先对接高相关度 campaign">
+        <SurfacePanel title="节日/热点主题匹配" subtitle="优先对接高相关度活动主题">
           {result ? (
             <div className={commonStyles.metricGrid}>
               {result.festivalThemes.map((item) => (

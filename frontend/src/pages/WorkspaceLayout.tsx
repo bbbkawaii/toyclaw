@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import type { JSX } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { toImageAssetStatusLabel } from "../shared/i18n/labels";
 import { StepRail } from "../shared/ui/StepRail";
 import { useWorkflowStore, type WorkflowStep } from "../store/workflow-store";
 import styles from "./WorkspaceLayout.module.css";
@@ -43,7 +44,7 @@ export function WorkspaceLayout(): JSX.Element {
     {
       key: "redesign" as const,
       label: "改款建议",
-      description: "颜色/造型/包装 + AI 资产预览",
+      description: "颜色/造型/包装 + 智能资产预览",
       enabled: Boolean(state.requestId && state.analysisId),
       done: Boolean(state.redesignResult),
     },
@@ -74,8 +75,8 @@ export function WorkspaceLayout(): JSX.Element {
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
         <div>
-          <p className={styles.eyebrow}>ToyGlobal AI Agent</p>
-          <h1 className="neon-title">Global Toy Redesign Lab</h1>
+          <p className={styles.eyebrow}>玩具出海智能助手</p>
+          <h1 className="neon-title">全球玩具改款实验室</h1>
           <p className={`muted ${styles.subline}`}>
             从原始玩具图到跨文化合规与改款建议，三步完成出海方案。
           </p>
@@ -105,16 +106,16 @@ export function WorkspaceLayout(): JSX.Element {
             <h3 className={styles.summaryTitle}>会话摘要</h3>
             <dl className={styles.metaList}>
               <div>
-                <dt>requestId</dt>
-                <dd>{state.requestId ?? "--"}</dd>
+                <dt>请求编号</dt>
+                <dd>{state.requestId ?? "暂无"}</dd>
               </div>
               <div>
-                <dt>analysisId</dt>
-                <dd>{state.analysisId ?? "--"}</dd>
+                <dt>分析编号</dt>
+                <dd>{state.analysisId ?? "暂无"}</dd>
               </div>
               <div>
-                <dt>suggestionId</dt>
-                <dd>{state.suggestionId ?? "--"}</dd>
+                <dt>建议编号</dt>
+                <dd>{state.suggestionId ?? "暂无"}</dd>
               </div>
             </dl>
             <ul className={styles.statList}>
@@ -129,8 +130,12 @@ export function WorkspaceLayout(): JSX.Element {
                 </strong>
               </li>
               <li>
-                预览图:
-                <strong>{state.redesignResult?.assets.previewImage.status ?? "--"}</strong>
+                预览图状态:
+                <strong>
+                  {state.redesignResult
+                    ? toImageAssetStatusLabel(state.redesignResult.assets.previewImage.status)
+                    : "暂无"}
+                </strong>
               </li>
             </ul>
           </section>

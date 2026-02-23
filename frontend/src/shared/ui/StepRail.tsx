@@ -19,7 +19,7 @@ interface StepRailProps {
 
 export function StepRail(props: StepRailProps): JSX.Element {
   return (
-    <nav className={styles.rail} aria-label="workflow step navigation">
+    <nav className={styles.rail} aria-label="流程步骤导航">
       {props.items.map((item, index) => {
         const isActive = props.currentStep === item.key;
 

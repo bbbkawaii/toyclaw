@@ -123,7 +123,7 @@ export function ImageInputPage(): JSX.Element {
       <SurfacePanel
         title="图像输入模块"
         subtitle="上传原始玩具图片，并提供改款方向（文本或预设）"
-        rightSlot={<span className="pill">step 01</span>}
+        rightSlot={<span className="pill">第 01 步</span>}
       >
         <form className={commonStyles.form} onSubmit={onSubmit}>
           <div className={commonStyles.field}>
@@ -212,7 +212,7 @@ export function ImageInputPage(): JSX.Element {
             <button className={commonStyles.buttonPrimary} type="submit" disabled={isSubmitting}>
               {isSubmitting ? "解析中..." : "提交并解析图像"}
             </button>
-            {isSubmitting ? <LoadingPulse label="AI 正在提取形状/颜色/材质/风格" /> : null}
+            {isSubmitting ? <LoadingPulse label="智能模型正在提取形状/颜色/材质/风格" /> : null}
           </div>
         </form>
       </SurfacePanel>
@@ -220,7 +220,7 @@ export function ImageInputPage(): JSX.Element {
       <SurfacePanel
         title="图像特征解析"
         subtitle="形状 / 颜色 / 材质 / 风格"
-        rightSlot={<span className="pill">AI Vision</span>}
+        rightSlot={<span className="pill">视觉分析</span>}
       >
         {featureSummary ? (
           <div className={commonStyles.split}>

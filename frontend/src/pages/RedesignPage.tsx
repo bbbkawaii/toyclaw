@@ -6,6 +6,11 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { ApiError, type ApiError as ApiErrorType, toApiError } from "../shared/api/errors";
+import {
+  toImageAssetStatusLabel,
+  toLevelLabel,
+  toShowcaseVideoStatusLabel,
+} from "../shared/i18n/labels";
 import { postRedesignSuggest } from "../shared/api/toyclaw";
 import type { ImageAssetResult } from "../shared/types/api";
 import { InlineError } from "../shared/ui/InlineError";
@@ -41,7 +46,7 @@ export function RedesignPage(): JSX.Element {
     if (!workflow.requestId || !workflow.analysisId) {
       setError(
         new ApiError({
-          message: "缺少 requestId 或 analysisId，请先完成前两个模块。",
+          message: "缺少请求编号或分析编号，请先完成前两个模块。",
           code: "MISSING_DEPENDENCY_ID",
         }),
       );
@@ -70,12 +75,12 @@ export function RedesignPage(): JSX.Element {
     <motion.div className={commonStyles.stack} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <SurfacePanel
         title="改款建议模块"
-        subtitle="颜色方案 / 造型细节 / 包装风格 / AI效果图"
-        rightSlot={<span className="pill">step 03</span>}
+        subtitle="颜色方案 / 造型细节 / 包装风格 / 智能效果图"
+        rightSlot={<span className="pill">第 03 步</span>}
       >
         <form className={commonStyles.form} onSubmit={onSubmit}>
           <div className={commonStyles.field}>
-            <span className={commonStyles.label}>AI 资产生成开关</span>
+            <span className={commonStyles.label}>智能资产生成开关</span>
             <div className={commonStyles.radioRow}>
               <label className={commonStyles.radioItem}>
                 <input type="checkbox" {...form.register("previewImage")} />
@@ -91,10 +96,10 @@ export function RedesignPage(): JSX.Element {
               </label>
             </div>
             <span className={commonStyles.hint}>
-              当前绑定 requestId:
-              <span className="kbd"> {workflow.requestId ?? "--"} </span>
-              analysisId:
-              <span className="kbd"> {workflow.analysisId ?? "--"} </span>
+              当前绑定请求编号:
+              <span className="kbd"> {workflow.requestId ?? "暂无"} </span>
+              分析编号:
+              <span className="kbd"> {workflow.analysisId ?? "暂无"} </span>
             </span>
           </div>
 
@@ -147,7 +152,7 @@ export function RedesignPage(): JSX.Element {
               {result.shapeAdjustments.map((item) => (
                 <article key={item.title} className={commonStyles.metricCard}>
                   <h4>
-                    [{item.priority}] {item.title}
+                    [{toLevelLabel(item.priority)}] {item.title}
                   </h4>
                   <p className={commonStyles.hint}>{item.reason}</p>
                   <ul className={commonStyles.list}>
@@ -186,22 +191,22 @@ export function RedesignPage(): JSX.Element {
           )}
         </SurfacePanel>
 
-        <SurfacePanel title="AI效果图生成" subtitle="改款预览图 + 三视图 + 展示视频脚本">
+        <SurfacePanel title="智能效果图生成" subtitle="改款预览图 + 三视图 + 展示视频脚本">
           {result ? (
             <div className={commonStyles.metricGrid}>
               <RenderImageAsset title="改款预览图" asset={result.assets.previewImage} />
-              <RenderImageAsset title="三视图 · Front" asset={result.assets.threeView.front} />
-              <RenderImageAsset title="三视图 · Side" asset={result.assets.threeView.side} />
-              <RenderImageAsset title="三视图 · Back" asset={result.assets.threeView.back} />
+              <RenderImageAsset title="三视图 · 正视图" asset={result.assets.threeView.front} />
+              <RenderImageAsset title="三视图 · 侧视图" asset={result.assets.threeView.side} />
+              <RenderImageAsset title="三视图 · 背视图" asset={result.assets.threeView.back} />
 
               <article className={commonStyles.metricCard}>
-                <h4>展示视频脚本 ({result.assets.showcaseVideo.status})</h4>
+                <h4>展示视频脚本（{toShowcaseVideoStatusLabel(result.assets.showcaseVideo.status)}）</h4>
                 <p>{result.assets.showcaseVideo.script}</p>
                 <p className={commonStyles.hint}>当前版本不生成关键帧，仅输出视频脚本。</p>
               </article>
             </div>
           ) : (
-            <p className="muted">暂无 AI 资产结果。</p>
+            <p className="muted">暂无智能资产结果。</p>
           )}
         </SurfacePanel>
       </div>
@@ -218,9 +223,9 @@ function RenderImageAsset({ title, asset }: { title: string; asset: ImageAssetRe
   return (
     <article className={commonStyles.metricCard}>
       <h4>
-        {title} · {asset.status}
+        {title} · {toImageAssetStatusLabel(asset.status)}
       </h4>
-      <p className={commonStyles.hint}>Prompt: {asset.prompt}</p>
+      <p className={commonStyles.hint}>生成提示词: {asset.prompt}</p>
       {imageSrc ? (
         <img
           src={imageSrc}
@@ -233,7 +238,7 @@ function RenderImageAsset({ title, asset }: { title: string; asset: ImageAssetRe
           }}
         />
       ) : (
-        <p className={commonStyles.hint}>未生成图片: {asset.reason ?? "N/A"}</p>
+        <p className={commonStyles.hint}>未生成图片: {asset.reason ?? "无"}</p>
       )}
     </article>
   );

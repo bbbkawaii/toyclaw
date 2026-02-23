@@ -43,7 +43,7 @@ export function toApiError(error: unknown): ApiError {
     }
 
     return new ApiError({
-      message: payload?.message || error.message || "请求失败",
+      message: payload?.message || "请求失败，请稍后重试。",
       code: payload?.code || "HTTP_ERROR",
       status: error.response?.status,
       requestId: payload?.requestId,
@@ -53,7 +53,7 @@ export function toApiError(error: unknown): ApiError {
 
   if (error instanceof Error) {
     return new ApiError({
-      message: error.message,
+      message: "系统处理失败，请稍后再试。",
       code: "INTERNAL_ERROR",
     });
   }
