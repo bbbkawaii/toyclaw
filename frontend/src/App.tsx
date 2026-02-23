@@ -5,15 +5,6 @@ import { LoadingPulse } from "./shared/ui/LoadingPulse";
 const WorkspaceLayout = lazy(() =>
   import("./pages/WorkspaceLayout").then((module) => ({ default: module.WorkspaceLayout })),
 );
-const ImageInputPage = lazy(() =>
-  import("./pages/ImageInputPage").then((module) => ({ default: module.ImageInputPage })),
-);
-const CrossCulturalPage = lazy(() =>
-  import("./pages/CrossCulturalPage").then((module) => ({ default: module.CrossCulturalPage })),
-);
-const RedesignPage = lazy(() =>
-  import("./pages/RedesignPage").then((module) => ({ default: module.RedesignPage })),
-);
 
 function RouteFallback(): JSX.Element {
   return (
@@ -27,13 +18,11 @@ function App(): JSX.Element {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/" element={<WorkspaceLayout />}>
-          <Route index element={<Navigate to="/image-input" replace />} />
-          <Route path="image-input" element={<ImageInputPage />} />
-          <Route path="cross-cultural" element={<CrossCulturalPage />} />
-          <Route path="redesign" element={<RedesignPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/image-input" replace />} />
+        <Route path="/" element={<WorkspaceLayout />} />
+        <Route path="/image-input" element={<Navigate to="/" replace />} />
+        <Route path="/cross-cultural" element={<Navigate to="/" replace />} />
+        <Route path="/redesign" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

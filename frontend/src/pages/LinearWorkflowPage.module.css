@@ -1,0 +1,31 @@
+.sectionAnchor {
+  scroll-margin-top: 18px;
+}
+
+.previewImage {
+  width: 100%;
+  max-width: 360px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 56%, transparent);
+}
+
+.stepBanner {
+  border-radius: 10px;
+  border: 1px dashed color-mix(in srgb, var(--line-strong) 56%, transparent);
+  background: color-mix(in srgb, var(--panel-2) 74%, transparent);
+  color: var(--ink-soft);
+  padding: 8px 10px;
+  font-size: 0.8rem;
+}
+
+.statusWrap {
+  display: grid;
+  gap: 8px;
+}
+
+.assetImage {
+  margin-top: 8px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 44%, transparent);
+}

@@ -1,30 +1,20 @@
 import { motion } from "framer-motion";
 import type { JSX } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { toImageAssetStatusLabel } from "../shared/i18n/labels";
 import { StepRail } from "../shared/ui/StepRail";
 import { useWorkflowStore, type WorkflowStep } from "../store/workflow-store";
+import { LinearWorkflowPage } from "./LinearWorkflowPage";
 import styles from "./WorkspaceLayout.module.css";
 
-const STEP_PATH_MAP: Record<WorkflowStep, string> = {
-  "image-input": "/image-input",
-  "cross-cultural": "/cross-cultural",
-  redesign: "/redesign",
-};
-
-const PATH_STEP_MAP: Record<string, WorkflowStep> = {
-  "/image-input": "image-input",
-  "/cross-cultural": "cross-cultural",
-  "/redesign": "redesign",
+const STEP_SECTION_ID_MAP: Record<WorkflowStep, string> = {
+  "image-input": "step-image-input",
+  "cross-cultural": "step-cross-cultural",
+  redesign: "step-redesign",
 };
 
 export function WorkspaceLayout(): JSX.Element {
-  const navigate = useNavigate();
-  const location = useLocation();
   const state = useWorkflowStore();
-
-  const routeStep = PATH_STEP_MAP[location.pathname] ?? "image-input";
-  const currentStep: WorkflowStep = routeStep;
+  const currentStep = state.step;
 
   const stepItems = [
     {
@@ -51,19 +41,22 @@ export function WorkspaceLayout(): JSX.Element {
   ];
 
   const handleStepClick = (step: WorkflowStep): void => {
-    if (step === "cross-cultural" && !state.requestId) {
+    const targetItem = stepItems.find((item) => item.key === step);
+    if (!targetItem?.enabled) {
       return;
     }
-    if (step === "redesign" && (!state.requestId || !state.analysisId)) {
-      return;
+
+    const section = document.getElementById(STEP_SECTION_ID_MAP[step]);
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+
     state.setStep(step);
-    navigate(STEP_PATH_MAP[step]);
   };
 
   const handleReset = (): void => {
     state.reset();
-    navigate("/image-input");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -93,12 +86,11 @@ export function WorkspaceLayout(): JSX.Element {
 
         <motion.main
           className={styles.main}
-          key={location.pathname}
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: "easeOut" }}
         >
-          <Outlet />
+          <LinearWorkflowPage />
         </motion.main>
 
         <aside className={styles.summary}>
