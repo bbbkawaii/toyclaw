@@ -1,30 +1,40 @@
-# ToyGlobal AI Agent Backend
+# ToyGlobal AI Agent（全栈项目）
 
-This repository currently implements the first three modules:
+本仓库已实现以下三大模块（前后端一体）：
 
-- Image input (upload + feature extraction)
-- Cross-cultural analysis (market selection + taboo/festival/competitor analysis)
-- Redesign suggestion (color/shape/packaging recommendations + AI asset generation)
-  - Video output is script-only (no video model / no keyframe generation)
+1. 图像输入模块
+   - 玩具图片上传（`image`）
+   - 改款方向输入（`directionText` 或 `directionPreset`）
+   - 图像特征解析（形状 / 颜色 / 材质 / 风格）
+2. 跨文化分析模块
+   - 目标市场选择（美国 / 欧洲 / 中东 / 东南亚 / 日韩）
+   - 文化禁忌检测
+   - 节日/热点主题匹配
+   - 竞品风格参考
+3. 改款建议模块
+   - 颜色方案建议
+   - 造型/细节调整建议
+   - 包装风格建议
+   - AI 资产输出：改款预览图、三视图、展示视频脚本
+   - 注意：当前没有视频生成模型，不生成视频或关键帧
 
-## Tech stack
+## 技术栈
 
-- Node.js + TypeScript
-- Fastify
-- Prisma + SQLite
-- Frontend workspace: React + Vite + Zustand + React Hook Form + Framer Motion
-- Vision provider abstraction (supports Gemini/OpenAI/Sophnet; default env points to Gemini `gemini-3-flash-preview`)
-- Image generation provider abstraction for preview + three-view (Gemini provider by default when key is configured)
+- 后端：Node.js + TypeScript + Fastify
+- 数据库：Prisma + SQLite
+- 前端：React + Vite + Zustand + React Hook Form + Framer Motion
+- 图像解析 Provider：Gemini / OpenAI / Sophnet（默认 Gemini）
+- 图片生成 Provider：Gemini（用于预览图与三视图）
 
-## Quick start
+## 快速开始
 
-1. Install dependencies:
+### 1) 安装依赖
 
 ```bash
 npm install
 ```
 
-2. Prepare env file:
+### 2) 初始化环境变量
 
 ```bash
 # macOS / Linux
@@ -34,121 +44,81 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-Set provider keys in `.env`:
+按需填写 `.env` 中的密钥：
 
-- If `VISION_PROVIDER=sophnet`, configure `SOPHNET_API_KEY`.
-- If `VISION_PROVIDER=openai`, configure `OPENAI_API_KEY`.
-- If `VISION_PROVIDER=gemini`, configure `GEMINI_VISION_API_KEY` (or reuse `GEMINI_IMAGE_API_KEY`).
-- For phase 3 image generation integration, configure `GEMINI_IMAGE_API_KEY`.
-- If frontend is served from another origin, set `CORS_ORIGIN` (e.g. `http://localhost:5173`).
+- `VISION_PROVIDER=sophnet` 时需要 `SOPHNET_API_KEY`
+- `VISION_PROVIDER=openai` 时需要 `OPENAI_API_KEY`
+- `VISION_PROVIDER=gemini` 时需要 `GEMINI_VISION_API_KEY`（或复用 `GEMINI_IMAGE_API_KEY`）
+- 第三模块图片资产需要 `GEMINI_IMAGE_API_KEY`
+- 若前端域名不是默认值，配置 `CORS_ORIGIN`（例如 `http://localhost:5173`）
 
-3. Create DB schema:
-
-```bash
-npm run prisma:push
-```
-
-4. Start dev server:
+### 3) 启动后端
 
 ```bash
 npm run dev
 ```
 
-`npm run dev` runs `prisma db push --skip-generate` automatically via `predev`, so schema drift (for example missing `CrossCulturalAnalysis`) is fixed on startup.
+说明：`npm run dev` 会自动触发 `predev`，执行 `prisma db push --skip-generate`，避免本地表结构缺失（例如 `CrossCulturalAnalysis` 不存在）。
 
-## Frontend workspace
-
-An independent frontend app is in `frontend/` (React + Vite).
-
-1. Install frontend deps:
-
-```bash
-cd frontend
-npm install
-```
-
-2. Prepare frontend env:
-
-```bash
-# macOS / Linux
-cp .env.example .env
-
-# Windows PowerShell
-Copy-Item .env.example .env
-```
-
-3. Start frontend:
-
-```bash
-npm run dev
-```
-
-From repo root, you can also use:
+### 4) 启动前端
 
 ```bash
 npm run dev:frontend
 ```
 
-## API
+或进入 `frontend/` 目录单独启动：
 
-### POST `/api/v1/image-input/analyze`
+```bash
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
 
-`multipart/form-data` fields:
+## API 概览
 
-- `image`: jpg/png/webp image file (required)
-- `directionText`: free text redesign direction (optional)
-- `directionPreset`: one of `CHANGE_COLOR`, `SEASONAL_THEME`, `ADD_ACCESSORY` (optional)
+### 图像输入
 
-Validation rule: `directionText` and `directionPreset` require at least one.
+- `POST /api/v1/image-input/analyze`
+  - `multipart/form-data`
+  - 字段：
+    - `image`：必填，支持 jpg/png/webp
+    - `directionText`：选填，自定义改款方向
+    - `directionPreset`：选填，枚举 `CHANGE_COLOR | SEASONAL_THEME | ADD_ACCESSORY`
+  - 规则：`directionText` 与 `directionPreset` 至少提供一个
+- `GET /api/v1/image-input/analyze/:requestId`
 
-### GET `/api/v1/image-input/analyze/:requestId`
+### 跨文化分析
 
-Fetch a stored analysis result by request ID.
+- `POST /api/v1/cross-cultural/analyze`
+  - `application/json`
+  - 字段：
+    - `requestId`
+    - `targetMarket`：`US | EUROPE | MIDDLE_EAST | SOUTHEAST_ASIA | JAPAN_KOREA`
+- `GET /api/v1/cross-cultural/analyze/:analysisId`
 
-### POST `/api/v1/cross-cultural/analyze`
+### 改款建议
 
-`application/json` body:
+- `POST /api/v1/redesign/suggest`
+  - `application/json`
+  - 字段：
+    - `requestId`
+    - `crossCulturalAnalysisId`
+    - `assets`（可选）：
+      - `previewImage`：是否生成改款预览图
+      - `threeView`：是否生成三视图
+      - `showcaseVideo`：是否生成展示视频脚本
+- `GET /api/v1/redesign/suggest/:suggestionId`
 
-- `requestId`: image analysis request ID
-- `targetMarket`: one of `US | EUROPE | MIDDLE_EAST | SOUTHEAST_ASIA | JAPAN_KOREA`
+`showcaseVideo` 当前行为：
 
-Returns taboo detection, festival/hot theme matches, and competitor style references.
+- `status` 只会是 `SCRIPT_ONLY` 或 `SKIPPED`
+- `keyframes` 固定为空数组 `[]`
 
-### GET `/api/v1/cross-cultural/analyze/:analysisId`
-
-Fetch stored cross-cultural analysis by analysis ID.
-
-### POST `/api/v1/redesign/suggest`
-
-`application/json` body:
-
-- `requestId`: image analysis request ID
-- `crossCulturalAnalysisId`: cross-cultural analysis ID associated with the same request
-- `assets` (optional):
-  - `previewImage`: boolean
-  - `threeView`: boolean
-  - `showcaseVideo`: boolean (script output only)
-
-Returns redesign recommendations:
-
-- color schemes
-- shape/detail adjustment suggestions
-- packaging style suggestions
-- AI assets:
-  - preview image
-  - three-view images
-  - showcase video script only (no keyframe/video generation model)
-  - `showcaseVideo.status` is `SCRIPT_ONLY` or `SKIPPED`
-  - `showcaseVideo.keyframes` is always `[]`
-
-### GET `/api/v1/redesign/suggest/:suggestionId`
-
-Fetch stored redesign suggestion by suggestion ID.
-
-## Tests
+## 测试与构建
 
 ```bash
 npm test
+npm run build
+npm --prefix frontend run build
 ```
-
-The test suite uses a mocked vision provider and temporary SQLite database.

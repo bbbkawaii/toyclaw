@@ -1,12 +1,12 @@
-# ToyGlobal Frontend Workspace
+# ToyGlobal 前端工作区
 
-React + Vite frontend for the three-service workflow:
+该目录是 ToyGlobal 的前端应用（React + Vite），对应完整三步流程：
 
-1. Image input and feature extraction
-2. Cross-cultural analysis
-3. Redesign suggestion and AI assets
+1. 图像输入与特征解析
+2. 跨文化分析
+3. 改款建议与 AI 资产展示
 
-## Local run
+## 本地运行
 
 ```bash
 cd frontend
@@ -15,14 +15,14 @@ cp .env.example .env
 npm run dev
 ```
 
-If backend runs on default `http://localhost:3000`, no extra config is needed.
+若后端使用默认地址 `http://localhost:3000`，通常无需额外配置。
 
-## Env
+## 环境变量
 
-- `VITE_API_BASE_URL`: backend API base URL (default in `.env.example` is `http://localhost:3000/api/v1`)
-- `VITE_API_TIMEOUT_MS`: frontend request timeout in milliseconds (default `180000`)
+- `VITE_API_BASE_URL`：后端 API 地址（默认 `http://localhost:3000/api/v1`）
+- `VITE_API_TIMEOUT_MS`：前端请求超时（毫秒，默认 `180000`）
 
-## Scripts
+## 常用命令
 
 - `npm run dev`
 - `npm run build`
