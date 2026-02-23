@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { postImageAnalyze } from "../shared/api/toyclaw";
 import { type ApiError, toApiError } from "../shared/api/errors";
+import { toZhColorName, toZhFeatureTerm } from "../shared/i18n/content";
 import { DIRECTION_PRESETS, type DirectionPreset } from "../shared/types/api";
 import { InlineError } from "../shared/ui/InlineError";
 import { LoadingPulse } from "../shared/ui/LoadingPulse";
@@ -137,7 +138,7 @@ export function ImageInputPage(): JSX.Element {
               accept="image/jpeg,image/png,image/webp"
               {...form.register("image")}
             />
-            <span className={commonStyles.hint}>支持 jpg / png / webp，最大 10MB。</span>
+            <span className={commonStyles.hint}>支持常见图片格式，文件大小不超过 10 兆字节。</span>
             {form.formState.errors.image ? (
               <span className={commonStyles.hint} style={{ color: "var(--danger)" }}>
                 {form.formState.errors.image.message}
@@ -228,7 +229,8 @@ export function ImageInputPage(): JSX.Element {
               <article className={commonStyles.metricCard}>
                 <h4>形状</h4>
                 <p>
-                  {featureSummary.shape.category} · <strong>{Math.round(featureSummary.shape.confidence * 100)}%</strong>
+                  {toZhFeatureTerm(featureSummary.shape.category)} ·{" "}
+                  <strong>{Math.round(featureSummary.shape.confidence * 100)}%</strong>
                 </p>
               </article>
               <article className={commonStyles.metricCard}>
@@ -236,7 +238,7 @@ export function ImageInputPage(): JSX.Element {
                 <ul className={commonStyles.list}>
                   {featureSummary.material.map((item) => (
                     <li key={item.name}>
-                      {item.name} ({Math.round(item.confidence * 100)}%)
+                      {toZhFeatureTerm(item.name)} ({Math.round(item.confidence * 100)}%)
                     </li>
                   ))}
                 </ul>
@@ -246,7 +248,7 @@ export function ImageInputPage(): JSX.Element {
                 <ul className={commonStyles.list}>
                   {featureSummary.style.map((item) => (
                     <li key={item.name}>
-                      {item.name} ({Math.round(item.confidence * 100)}%)
+                      {toZhFeatureTerm(item.name)} ({Math.round(item.confidence * 100)}%)
                     </li>
                   ))}
                 </ul>
@@ -259,7 +261,7 @@ export function ImageInputPage(): JSX.Element {
                 {featureSummary.colors.map((color) => (
                   <p className={commonStyles.colorLine} key={`${color.name}-${color.hex}`}>
                     <span className={commonStyles.colorSwatch} style={{ backgroundColor: color.hex }} />
-                    {color.name} {color.hex} · 占比 {Math.round(color.proportion * 100)}%
+                    {toZhColorName(color.name)} · 占比 {Math.round(color.proportion * 100)}%
                   </p>
                 ))}
               </div>

@@ -6,6 +6,17 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { ApiError, type ApiError as ApiErrorType, toApiError } from "../shared/api/errors";
+import {
+  toZhCompetitorArchetype,
+  toZhCompetitorOpportunities,
+  toZhCompetitorSummary,
+  toZhFestivalElements,
+  toZhFestivalName,
+  toZhFestivalReason,
+  toZhTabooRecommendation,
+  toZhTabooRisk,
+  toZhTabooTitle,
+} from "../shared/i18n/content";
 import { toLevelLabel } from "../shared/i18n/labels";
 import { postCrossCulturalAnalyze } from "../shared/api/toyclaw";
 import { TARGET_MARKETS, type TargetMarket } from "../shared/types/api";
@@ -98,9 +109,7 @@ export function CrossCulturalPage(): JSX.Element {
               还没有请求编号，请先返回「图像输入模块」完成上传。
             </p>
           ) : (
-            <p className={commonStyles.hint}>
-              当前请求编号: <span className="kbd">{workflow.requestId}</span>
-            </p>
+            <p className={commonStyles.hint}>当前请求编号状态：已创建</p>
           )}
 
           <InlineError error={error} />
@@ -127,13 +136,13 @@ export function CrossCulturalPage(): JSX.Element {
               {result.tabooFindings.map((item) => (
                 <article key={item.ruleId} className={commonStyles.metricCard}>
                   <h4>
-                    [{toLevelLabel(item.severity)}] {item.title}
+                    [{toLevelLabel(item.severity)}] {toZhTabooTitle(item.ruleId, item.title)}
                   </h4>
                   <p>
                     命中: <strong>{item.matched ? "是" : "否"}</strong>
                   </p>
-                  <p className={commonStyles.hint}>风险: {item.risk}</p>
-                  <p className={commonStyles.hint}>建议: {item.recommendation}</p>
+                  <p className={commonStyles.hint}>风险: {toZhTabooRisk(item.matched, item.risk)}</p>
+                  <p className={commonStyles.hint}>建议: {toZhTabooRecommendation(item.matched, item.recommendation)}</p>
                 </article>
               ))}
             </div>
@@ -148,11 +157,13 @@ export function CrossCulturalPage(): JSX.Element {
               {result.festivalThemes.map((item) => (
                 <article key={item.themeId} className={commonStyles.metricCard}>
                   <h4>
-                    {item.name} · {Math.round(item.relevance * 100)}%
+                    {toZhFestivalName(item.themeId, item.name)} · {Math.round(item.relevance * 100)}%
                   </h4>
-                  <p className={commonStyles.hint}>{item.reason}</p>
+                  <p className={commonStyles.hint}>{toZhFestivalReason(item.relevance)}</p>
                   <ul className={commonStyles.list}>
-                    {item.suggestedElements.slice(0, 3).map((it) => (
+                    {toZhFestivalElements(item.themeId, item.suggestedElements)
+                      .slice(0, 3)
+                      .map((it) => (
                       <li key={it}>{it}</li>
                     ))}
                   </ul>
@@ -171,11 +182,12 @@ export function CrossCulturalPage(): JSX.Element {
             {result.competitorStyles.map((item) => (
               <article key={item.referenceId} className={commonStyles.metricCard}>
                 <h4>
-                  {item.brandArchetype} · {Math.round(item.matchingScore * 100)}%
+                  {toZhCompetitorArchetype(item.referenceId, item.brandArchetype)} ·{" "}
+                  {Math.round(item.matchingScore * 100)}%
                 </h4>
-                <p>{item.styleSummary}</p>
+                <p>{toZhCompetitorSummary(item.styleSummary)}</p>
                 <ul className={commonStyles.list}>
-                  {item.opportunities.map((opportunity) => (
+                  {toZhCompetitorOpportunities(item.opportunities).map((opportunity) => (
                     <li key={opportunity}>{opportunity}</li>
                   ))}
                 </ul>

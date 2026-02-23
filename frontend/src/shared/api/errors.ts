@@ -43,7 +43,7 @@ export function toApiError(error: unknown): ApiError {
     }
 
     return new ApiError({
-      message: payload?.message || "请求失败，请稍后重试。",
+      message: "请求失败，请稍后重试。",
       code: payload?.code || "HTTP_ERROR",
       status: error.response?.status,
       requestId: payload?.requestId,

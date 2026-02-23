@@ -107,15 +107,15 @@ export function WorkspaceLayout(): JSX.Element {
             <dl className={styles.metaList}>
               <div>
                 <dt>请求编号</dt>
-                <dd>{state.requestId ?? "暂无"}</dd>
+                <dd>{state.requestId ? "已创建" : "未创建"}</dd>
               </div>
               <div>
                 <dt>分析编号</dt>
-                <dd>{state.analysisId ?? "暂无"}</dd>
+                <dd>{state.analysisId ? "已创建" : "未创建"}</dd>
               </div>
               <div>
                 <dt>建议编号</dt>
-                <dd>{state.suggestionId ?? "暂无"}</dd>
+                <dd>{state.suggestionId ? "已创建" : "未创建"}</dd>
               </div>
             </dl>
             <ul className={styles.statList}>

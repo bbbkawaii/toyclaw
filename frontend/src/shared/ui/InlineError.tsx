@@ -17,7 +17,6 @@ export function InlineError({ error }: InlineErrorProps): JSX.Element | null {
       <p className={styles.message}>{error.message}</p>
       <p className={styles.meta}>
         错误类型: <strong>{toErrorCodeLabel(error.code)}</strong>
-        {error.requestId ? ` · 请求编号: ${error.requestId}` : ""}
       </p>
     </div>
   );

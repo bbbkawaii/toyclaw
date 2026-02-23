@@ -7,6 +7,23 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { ApiError, type ApiError as ApiErrorType, toApiError } from "../shared/api/errors";
 import {
+  toZhAssetPrompt,
+  toZhAssetReason,
+  toZhColorName,
+  toZhColorUsage,
+  toZhCopyTone,
+  toZhPackagingReason,
+  toZhPackagingStyleName,
+  toZhPackagingVisual,
+  toZhSchemeName,
+  toZhSchemeReason,
+  toZhShapeAction,
+  toZhShapeReason,
+  toZhShapeTitle,
+  toZhShowcaseScript,
+  toZhText,
+} from "../shared/i18n/content";
+import {
   toImageAssetStatusLabel,
   toLevelLabel,
   toShowcaseVideoStatusLabel,
@@ -96,10 +113,8 @@ export function RedesignPage(): JSX.Element {
               </label>
             </div>
             <span className={commonStyles.hint}>
-              当前绑定请求编号:
-              <span className="kbd"> {workflow.requestId ?? "暂无"} </span>
-              分析编号:
-              <span className="kbd"> {workflow.analysisId ?? "暂无"} </span>
+              当前绑定请求编号状态：{workflow.requestId ? "已创建" : "未创建"}；分析编号状态：
+              {workflow.analysisId ? "已创建" : "未创建"}
             </span>
           </div>
 
@@ -127,14 +142,14 @@ export function RedesignPage(): JSX.Element {
               {result.colorSchemes.map((scheme) => (
                 <article key={scheme.schemeName} className={commonStyles.metricCard}>
                   <h4>
-                    {scheme.schemeName} · {scheme.positioning}
+                    {toZhSchemeName(scheme.schemeName)} · {toZhText(scheme.positioning, "本地化定位")}
                   </h4>
-                  <p className={commonStyles.hint}>{scheme.reason}</p>
+                  <p className={commonStyles.hint}>{toZhSchemeReason(scheme.reason)}</p>
                   <div className={commonStyles.metricGrid}>
                     {scheme.colors.map((color) => (
                       <p key={`${scheme.schemeName}-${color.hex}-${color.usage}`} className={commonStyles.colorLine}>
                         <span className={commonStyles.colorSwatch} style={{ backgroundColor: color.hex }} />
-                        {color.name} {color.hex} ({color.usage})
+                        {toZhColorName(color.name)}（{toZhColorUsage(color.usage)}）
                       </p>
                     ))}
                   </div>
@@ -152,12 +167,12 @@ export function RedesignPage(): JSX.Element {
               {result.shapeAdjustments.map((item) => (
                 <article key={item.title} className={commonStyles.metricCard}>
                   <h4>
-                    [{toLevelLabel(item.priority)}] {item.title}
+                    [{toLevelLabel(item.priority)}] {toZhShapeTitle(item.title)}
                   </h4>
-                  <p className={commonStyles.hint}>{item.reason}</p>
+                  <p className={commonStyles.hint}>{toZhShapeReason(item.reason)}</p>
                   <ul className={commonStyles.list}>
                     {item.actions.map((action) => (
-                      <li key={action}>{action}</li>
+                      <li key={action}>{toZhShapeAction(action)}</li>
                     ))}
                   </ul>
                 </article>
@@ -175,12 +190,12 @@ export function RedesignPage(): JSX.Element {
             <div className={commonStyles.metricGrid}>
               {result.packagingSuggestions.map((item) => (
                 <article key={item.styleName} className={commonStyles.metricCard}>
-                  <h4>{item.styleName}</h4>
-                  <p className={commonStyles.hint}>{item.reason}</p>
-                  <p className={commonStyles.hint}>语气: {item.copyTone}</p>
+                  <h4>{toZhPackagingStyleName(item.styleName)}</h4>
+                  <p className={commonStyles.hint}>{toZhPackagingReason(item.reason)}</p>
+                  <p className={commonStyles.hint}>语气: {toZhCopyTone(item.copyTone)}</p>
                   <ul className={commonStyles.list}>
                     {item.visualElements.map((visual) => (
-                      <li key={visual}>{visual}</li>
+                      <li key={visual}>{toZhPackagingVisual(visual)}</li>
                     ))}
                   </ul>
                 </article>
@@ -201,7 +216,7 @@ export function RedesignPage(): JSX.Element {
 
               <article className={commonStyles.metricCard}>
                 <h4>展示视频脚本（{toShowcaseVideoStatusLabel(result.assets.showcaseVideo.status)}）</h4>
-                <p>{result.assets.showcaseVideo.script}</p>
+                <p>{toZhShowcaseScript()}</p>
                 <p className={commonStyles.hint}>当前版本不生成关键帧，仅输出视频脚本。</p>
               </article>
             </div>
@@ -225,7 +240,7 @@ function RenderImageAsset({ title, asset }: { title: string; asset: ImageAssetRe
       <h4>
         {title} · {toImageAssetStatusLabel(asset.status)}
       </h4>
-      <p className={commonStyles.hint}>生成提示词: {asset.prompt}</p>
+      <p className={commonStyles.hint}>生成提示词: {toZhAssetPrompt()}</p>
       {imageSrc ? (
         <img
           src={imageSrc}
@@ -238,7 +253,7 @@ function RenderImageAsset({ title, asset }: { title: string; asset: ImageAssetRe
           }}
         />
       ) : (
-        <p className={commonStyles.hint}>未生成图片: {asset.reason ?? "无"}</p>
+        <p className={commonStyles.hint}>未生成图片: {toZhAssetReason(asset.reason)}</p>
       )}
     </article>
   );
