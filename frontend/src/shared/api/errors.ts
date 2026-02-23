@@ -30,6 +30,18 @@ export function toApiError(error: unknown): ApiError {
 
   if (axios.isAxiosError(error)) {
     const payload = error.response?.data as Partial<AppErrorResponse> | undefined;
+    const isTimeout = error.code === "ECONNABORTED" || /timeout/i.test(error.message);
+
+    if (isTimeout) {
+      return new ApiError({
+        message: "模型响应超时。已等待较长时间，请重试或更换更小图片后再试。",
+        code: "REQUEST_TIMEOUT",
+        status: error.response?.status,
+        requestId: payload?.requestId,
+        details: payload?.details,
+      });
+    }
+
     return new ApiError({
       message: payload?.message || error.message || "请求失败",
       code: payload?.code || "HTTP_ERROR",
@@ -51,4 +63,3 @@ export function toApiError(error: unknown): ApiError {
     code: "UNKNOWN_ERROR",
   });
 }
-

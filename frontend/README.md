@@ -20,6 +20,7 @@ If backend runs on default `http://localhost:3000`, no extra config is needed.
 ## Env
 
 - `VITE_API_BASE_URL`: backend API base URL (default in `.env.example` is `http://localhost:3000/api/v1`)
+- `VITE_API_TIMEOUT_MS`: frontend request timeout in milliseconds (default `120000`)
 
 ## Scripts
 
@@ -27,4 +28,3 @@ If backend runs on default `http://localhost:3000`, no extra config is needed.
 - `npm run build`
 - `npm run lint`
 - `npm run preview`
-
