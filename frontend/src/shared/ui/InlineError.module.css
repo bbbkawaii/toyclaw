@@ -1,0 +1,21 @@
+.errorBox {
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  padding: 10px 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.message {
+  margin: 0;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--danger) 80%, white);
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.76rem;
+  color: color-mix(in srgb, var(--ink-soft) 85%, white);
+}
+

@@ -11,6 +11,7 @@ This repository currently implements the first three modules:
 - Node.js + TypeScript
 - Fastify
 - Prisma + SQLite
+- Frontend workspace: React + Vite + Zustand + React Hook Form + Framer Motion
 - Vision provider abstraction (default: Sophnet `Kimi-K2.5`, optional: OpenAI)
 - Image generation provider abstraction (Gemini provider by default when key is configured)
 
@@ -48,6 +49,39 @@ npm run prisma:push
 
 ```bash
 npm run dev
+```
+
+## Frontend workspace
+
+An independent frontend app is in `frontend/` (React + Vite).
+
+1. Install frontend deps:
+
+```bash
+cd frontend
+npm install
+```
+
+2. Prepare frontend env:
+
+```bash
+# macOS / Linux
+cp .env.example .env
+
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+3. Start frontend:
+
+```bash
+npm run dev
+```
+
+From repo root, you can also use:
+
+```bash
+npm run dev:frontend
 ```
 
 ## API

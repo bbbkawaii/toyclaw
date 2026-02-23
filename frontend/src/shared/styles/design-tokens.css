@@ -1,0 +1,28 @@
+@import url("https://fonts.googleapis.com/css2?family=Audiowide&family=Urbanist:wght@400;500;600;700&display=swap");
+
+:root {
+  --font-display: "Audiowide", "Segoe UI", sans-serif;
+  --font-body: "Urbanist", "Segoe UI", sans-serif;
+
+  --bg-base: #0a1024;
+  --bg-elevated: #0f1733;
+  --panel: #1a2552;
+  --panel-2: #2c1f5d;
+  --line: #5a6cc9;
+  --line-strong: #8ea0ff;
+
+  --ink: #f6f8ff;
+  --ink-soft: #a9b3e6;
+  --ink-dim: #7f8ac8;
+
+  --accent-1: #58f1ff;
+  --accent-2: #ff7fbe;
+  --accent-3: #ffe062;
+  --success: #4ff4b7;
+  --danger: #ff6c8c;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+

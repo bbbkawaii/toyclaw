@@ -3,6 +3,7 @@ dist/
 coverage/
 storage/
 .env
+frontend/.env
 *.log
 dev.db
 test.db

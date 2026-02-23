@@ -1,0 +1,164 @@
+.stack {
+  display: grid;
+  gap: 14px;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-soft);
+}
+
+.hint {
+  font-size: 0.73rem;
+  color: var(--ink-dim);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
+  color: var(--ink);
+  padding: 10px 12px;
+}
+
+.textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
+.buttonRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.buttonPrimary,
+.buttonGhost {
+  appearance: none;
+  border-radius: 11px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.buttonPrimary {
+  border: 1px solid color-mix(in srgb, var(--accent-1) 70%, transparent);
+  color: #08122d;
+  font-weight: 700;
+  background: linear-gradient(120deg, var(--accent-1), var(--accent-3) 70%);
+}
+
+.buttonGhost {
+  border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+}
+
+.buttonPrimary:hover,
+.buttonGhost:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px color-mix(in srgb, var(--bg-base) 50%, black);
+}
+
+.buttonPrimary:disabled,
+.buttonGhost:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+  opacity: 0.7;
+  transform: none;
+  box-shadow: none;
+}
+
+.radioRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.radioItem {
+  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  border-radius: 999px;
+  padding: 6px 10px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  font-size: 0.84rem;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.metricGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.metricCard {
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+  padding: 9px 10px;
+}
+
+.metricCard h4 {
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.metricCard p {
+  margin: 0;
+}
+
+.metricCard strong {
+  color: var(--accent-1);
+}
+
+.colorLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.colorSwatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, var(--ink) 50%, transparent);
+}
+
+.list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+

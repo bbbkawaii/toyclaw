@@ -5,10 +5,13 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:frontend": "npm --prefix frontend run dev",
     "build": "tsc -p tsconfig.json",
+    "build:frontend": "npm --prefix frontend run build",
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "lint:frontend": "npm --prefix frontend run lint",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push"
   },
