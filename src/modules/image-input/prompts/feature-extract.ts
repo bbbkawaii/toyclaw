@@ -15,6 +15,7 @@ Rules:
 - colors[].hex must be valid hex colors.
 - colors[].proportion should sum close to 1.0.
 - Keep evidence concise and factual.
+- Use Simplified Chinese for all textual values in the JSON payload.
 `.trim();
 
 export function buildFeatureExtractionUserPrompt(direction: DirectionInput): string {
@@ -30,5 +31,9 @@ Return JSON with this exact structure:
   "material": [{ "name": string, "confidence": number, "evidence"?: string }],
   "style": [{ "name": string, "confidence": number, "evidence"?: string }]
 }
+
+Language requirement:
+- Keep JSON keys unchanged.
+- All string values (except hex colors) must be in Simplified Chinese.
 `.trim();
 }
