@@ -22,6 +22,9 @@ export async function fetchWithProxy(input: string, init: RequestInit = {}): Pro
 }
 
 function resolveProxyUrl(targetUrl: string): string | undefined {
+  const httpProxy = readProxyEnv("HTTP_PROXY");
+  const httpsProxy = readProxyEnv("HTTPS_PROXY");
+
   try {
     const url = new URL(targetUrl);
     if (isBypassedByNoProxy(url.hostname)) {
@@ -29,20 +32,20 @@ function resolveProxyUrl(targetUrl: string): string | undefined {
     }
 
     if (url.protocol === "https:") {
-      return process.env.HTTPS_PROXY || process.env.HTTP_PROXY || undefined;
+      return httpsProxy || httpProxy || undefined;
     }
     if (url.protocol === "http:") {
-      return process.env.HTTP_PROXY || undefined;
+      return httpProxy || undefined;
     }
   } catch {
-    return process.env.HTTPS_PROXY || process.env.HTTP_PROXY || undefined;
+    return httpsProxy || httpProxy || undefined;
   }
 
   return undefined;
 }
 
 function isBypassedByNoProxy(hostname: string): boolean {
-  const noProxy = process.env.NO_PROXY;
+  const noProxy = process.env.NO_PROXY || process.env.no_proxy;
   if (!noProxy) {
     return false;
   }
@@ -57,10 +60,35 @@ function isBypassedByNoProxy(hostname: string): boolean {
     if (rule === "*") {
       return true;
     }
-    if (rule.startsWith(".")) {
-      return normalizedHost.endsWith(rule.slice(1));
+
+    const normalizedRule = stripPort(rule);
+    if (!normalizedRule) {
+      return false;
     }
-    return normalizedHost === rule;
+
+    if (rule.startsWith(".")) {
+      const suffix = normalizedRule.slice(1);
+      return normalizedHost === suffix || normalizedHost.endsWith(`.${suffix}`);
+    }
+
+    return normalizedHost === normalizedRule || normalizedHost.endsWith(`.${normalizedRule}`);
   });
 }
 
+function readProxyEnv(key: "HTTP_PROXY" | "HTTPS_PROXY"): string | undefined {
+  const direct = process.env[key];
+  if (direct && direct.trim().length > 0) {
+    return direct.trim();
+  }
+
+  const lower = process.env[key.toLowerCase()];
+  if (lower && lower.trim().length > 0) {
+    return lower.trim();
+  }
+
+  return undefined;
+}
+
+function stripPort(value: string): string {
+  return value.replace(/:\d+$/, "");
+}

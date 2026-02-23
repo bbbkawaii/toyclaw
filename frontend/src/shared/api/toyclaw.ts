@@ -40,11 +40,7 @@ export async function postImageAnalyze(payload: ImageAnalyzePayload): Promise<An
   formData.append("image", payload.image);
 
   try {
-    const response = await apiClient.post<AnalyzeResponse>("/image-input/analyze", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await apiClient.post<AnalyzeResponse>("/image-input/analyze", formData);
     return response.data;
   } catch (error) {
     throw toApiError(error);

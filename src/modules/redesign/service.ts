@@ -542,12 +542,15 @@ export class RedesignService {
     referenceImage: ReferenceImage | undefined,
   ): Promise<RedesignAssets> {
     const previewPrompt = buildPreviewAssetPrompt(context);
-    const previewImage = flags.previewImage
-      ? await this.generateImageAsset(previewPrompt, referenceImage)
-      : this.skippedImageAsset(previewPrompt, "DISABLED_BY_REQUEST");
+    const previewImagePromise = flags.previewImage
+      ? this.generateImageAsset(previewPrompt, referenceImage)
+      : Promise.resolve(this.skippedImageAsset(previewPrompt, "DISABLED_BY_REQUEST"));
 
-    const threeView = await this.generateThreeViewAssets(context, flags.threeView, referenceImage);
-    const showcaseVideo = await this.generateShowcaseVideoAssets(context, flags.showcaseVideo);
+    const [previewImage, threeView, showcaseVideo] = await Promise.all([
+      previewImagePromise,
+      this.generateThreeViewAssets(context, flags.threeView, referenceImage),
+      this.generateShowcaseVideoAssets(context, flags.showcaseVideo),
+    ]);
 
     return {
       previewImage,

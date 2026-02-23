@@ -3,6 +3,7 @@ import {
   buildFeatureExtractionUserPrompt,
 } from "../../modules/image-input/prompts/feature-extract";
 import { extractedFeaturesSchema } from "../../modules/image-input/schemas";
+import { fetchWithProxy } from "../../lib/http/fetch-with-proxy";
 import type { VisionProvider, VisionProviderInput, VisionProviderResult } from "./base";
 import { AppError } from "../../lib/errors";
 
@@ -92,7 +93,7 @@ export class SophnetVisionProvider implements VisionProvider {
     const timeoutHandle = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const response = await fetch(this.apiUrl, {
+      const response = await fetchWithProxy(this.apiUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
