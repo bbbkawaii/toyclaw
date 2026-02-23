@@ -70,6 +70,30 @@ class MockImageGenerationProvider implements ImageGenerationProvider {
   }
 }
 
+class ReferenceSensitiveImageProvider implements ImageGenerationProvider {
+  readonly providerName = "reference-sensitive";
+  readonly modelName = "reference-sensitive-v1";
+
+  async generatePreview(input: ImageGenerationInput): Promise<ImageGenerationResult> {
+    if (input.referenceImageBase64) {
+      throw new Error("Unable to process input image.");
+    }
+
+    return {
+      imageBase64: Buffer.from("fallback-image", "utf8").toString("base64"),
+      mimeType: "image/png",
+      rawResponse: {
+        fallback: true,
+      },
+    };
+  }
+}
+
+const VALID_PNG_BUFFER = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aE0AAAAASUVORK5CYII=",
+  "base64",
+);
+
 interface MultipartBuilderInput {
   fields: Record<string, string>;
   file: {
@@ -284,5 +308,76 @@ describe("redesign routes", () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json().code).toBe("CROSS_CULTURAL_MISMATCH");
+  });
+
+  it("retries image generation without reference image when reference call fails", async () => {
+    const fallbackApp = await createApp({
+      prisma,
+      visionProvider: new MockVisionProvider(),
+      imageGenerationProvider: new ReferenceSensitiveImageProvider(),
+      config: {
+        databaseUrl: dbUrl,
+        uploadDir: join(tmpRoot, "retry-uploads"),
+        openaiModel: "mock-vision-v1",
+        maxFileSizeMb: 10,
+        providerTimeoutMs: 1000,
+        port: 0,
+      },
+    });
+    await fallbackApp.ready();
+
+    const multipart = buildMultipart({
+      fields: { directionPreset: "CHANGE_COLOR" },
+      file: {
+        fieldName: "image",
+        filename: "toy.png",
+        contentType: "image/png",
+        data: VALID_PNG_BUFFER,
+      },
+    });
+
+    const imageResponse = await fallbackApp.inject({
+      method: "POST",
+      url: "/api/v1/image-input/analyze",
+      payload: multipart.body,
+      headers: {
+        "content-type": multipart.contentType,
+      },
+    });
+    expect(imageResponse.statusCode).toBe(200);
+    const imagePayload = imageResponse.json();
+
+    const crossResponse = await fallbackApp.inject({
+      method: "POST",
+      url: "/api/v1/cross-cultural/analyze",
+      payload: {
+        requestId: imagePayload.requestId,
+        targetMarket: "US",
+      },
+    });
+    expect(crossResponse.statusCode).toBe(200);
+    const crossPayload = crossResponse.json();
+
+    const redesignResponse = await fallbackApp.inject({
+      method: "POST",
+      url: "/api/v1/redesign/suggest",
+      payload: {
+        requestId: imagePayload.requestId,
+        crossCulturalAnalysisId: crossPayload.analysisId,
+        assets: {
+          previewImage: true,
+          threeView: false,
+          showcaseVideo: false,
+        },
+      },
+    });
+
+    await fallbackApp.close();
+
+    expect(redesignResponse.statusCode).toBe(200);
+    const redesignPayload = redesignResponse.json();
+    expect(redesignPayload.assets.previewImage.status).toBe("READY");
+    expect(redesignPayload.assets.threeView.front.status).toBe("SKIPPED");
+    expect(redesignPayload.assets.showcaseVideo.status).toBe("SKIPPED");
   });
 });

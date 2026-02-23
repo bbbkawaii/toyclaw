@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import sharp from "sharp";
 import { AppError } from "../../lib/errors";
 import type { ImageGenerationProvider } from "../../providers/image/base";
 import { getMarketProfile } from "../cross-cultural/knowledge-base";
@@ -502,15 +503,36 @@ export class RedesignService {
   }
 
   private async loadReferenceImage(imagePath: string, mimeType: string): Promise<ReferenceImage | undefined> {
+    const absolutePath = join(this.deps.uploadDir, imagePath);
+
     try {
-      const absolutePath = join(this.deps.uploadDir, imagePath);
-      const file = await readFile(absolutePath);
+      const optimized = await sharp(absolutePath, { failOnError: false })
+        .rotate()
+        .resize({
+          width: 1024,
+          height: 1024,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .png({
+          compressionLevel: 9,
+        })
+        .toBuffer();
+
       return {
-        imageBase64: file.toString("base64"),
-        mimeType,
+        imageBase64: optimized.toString("base64"),
+        mimeType: "image/png",
       };
     } catch {
-      return undefined;
+      try {
+        const file = await readFile(absolutePath);
+        return {
+          imageBase64: file.toString("base64"),
+          mimeType,
+        };
+      } catch {
+        return undefined;
+      }
     }
   }
 
@@ -591,41 +613,73 @@ export class RedesignService {
       return this.skippedImageAsset(prompt, "IMAGE_PROVIDER_NOT_CONFIGURED");
     }
 
-    try {
-      const result = await this.deps.imageProvider.generatePreview({
+    let latestError: unknown;
+
+    if (referenceImage) {
+      const withReference = await this.generateImageAttempt({
         prompt,
-        referenceImageBase64: referenceImage?.imageBase64,
-        mimeType: referenceImage?.mimeType,
+        referenceImage,
       });
-
-      if (!result.imageBase64) {
-        return {
-          status: "FAILED",
-          prompt,
-          reason: "IMAGE_PROVIDER_NO_IMAGE",
-        };
+      if (withReference.ok) {
+        return withReference.asset;
       }
+      latestError = withReference.error;
+    }
 
-      return {
-        status: "READY",
-        prompt,
-        imageBase64: result.imageBase64,
-        mimeType: result.mimeType ?? "image/png",
-      };
-    } catch (error) {
-      if (error instanceof Error) {
-        return {
-          status: "FAILED",
-          prompt,
-          reason: error.message,
-        };
-      }
+    const textOnly = await this.generateImageAttempt({
+      prompt,
+    });
+    if (textOnly.ok) {
+      return textOnly.asset;
+    }
+    latestError = textOnly.error ?? latestError;
 
+    if (latestError instanceof Error) {
       return {
         status: "FAILED",
         prompt,
-        reason: "IMAGE_PROVIDER_ERROR",
+        reason: latestError.message,
       };
+    }
+
+    return {
+      status: "FAILED",
+      prompt,
+      reason: "IMAGE_PROVIDER_ERROR",
+    };
+  }
+
+  private async generateImageAttempt(input: {
+    prompt: string;
+    referenceImage?: ReferenceImage;
+  }): Promise<{ ok: true; asset: ImageAssetResult } | { ok: false; error: unknown }> {
+    const imageProvider = this.deps.imageProvider;
+    if (!imageProvider) {
+      return { ok: false, error: new AppError("Image provider is not configured", "IMAGE_PROVIDER_NOT_CONFIGURED", 500) };
+    }
+
+    try {
+      const result = await imageProvider.generatePreview({
+        prompt: input.prompt,
+        referenceImageBase64: input.referenceImage?.imageBase64,
+        mimeType: input.referenceImage?.mimeType,
+      });
+
+      if (!result.imageBase64) {
+        return { ok: false, error: new AppError("Image provider returned no image", "IMAGE_PROVIDER_NO_IMAGE", 502) };
+      }
+
+      return {
+        ok: true,
+        asset: {
+          status: "READY",
+          prompt: input.prompt,
+          imageBase64: result.imageBase64,
+          mimeType: result.mimeType ?? "image/png",
+        },
+      };
+    } catch (error) {
+      return { ok: false, error };
     }
   }
 
