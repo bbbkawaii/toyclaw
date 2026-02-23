@@ -151,7 +151,7 @@ export interface RedesignSuggestionResponse {
       back: ImageAssetResult;
     };
     showcaseVideo: {
-      status: "KEYFRAME_READY" | "SCRIPT_ONLY" | "SKIPPED";
+      status: "SCRIPT_ONLY" | "SKIPPED";
       script: string;
       keyframes: ShowcaseVideoKeyframe[];
       reason?: string;
@@ -170,4 +170,3 @@ export interface AppErrorResponse {
   details?: unknown;
   requestId?: string;
 }
-

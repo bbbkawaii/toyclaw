@@ -54,7 +54,7 @@ export interface ShowcaseVideoKeyframe {
 }
 
 export interface ShowcaseVideoAssetResult {
-  status: "KEYFRAME_READY" | "SCRIPT_ONLY" | "SKIPPED";
+  status: "SCRIPT_ONLY" | "SKIPPED";
   script: string;
   keyframes: ShowcaseVideoKeyframe[];
   reason?: string;
@@ -87,4 +87,3 @@ export interface RedesignSuggestionResponse {
   };
   createdAt: string;
 }
-

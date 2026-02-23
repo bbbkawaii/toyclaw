@@ -70,7 +70,7 @@ export const showcaseVideoKeyframeSchema = z.object({
 });
 
 export const showcaseVideoAssetResultSchema = z.object({
-  status: z.enum(["KEYFRAME_READY", "SCRIPT_ONLY", "SKIPPED"]),
+  status: z.enum(["SCRIPT_ONLY", "SKIPPED"]),
   script: z.string().min(1),
   keyframes: z.array(showcaseVideoKeyframeSchema),
   reason: z.string().min(1).optional(),
@@ -91,4 +91,3 @@ export const redesignResultPayloadSchema = z.object({
 });
 
 export type RedesignSuggestBodySchema = z.infer<typeof redesignSuggestBodySchema>;
-

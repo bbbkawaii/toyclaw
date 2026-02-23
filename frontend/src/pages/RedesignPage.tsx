@@ -87,7 +87,7 @@ export function RedesignPage(): JSX.Element {
               </label>
               <label className={commonStyles.radioItem}>
                 <input type="checkbox" {...form.register("showcaseVideo")} />
-                展示视频关键帧
+                展示视频脚本
               </label>
             </div>
             <span className={commonStyles.hint}>
@@ -186,7 +186,7 @@ export function RedesignPage(): JSX.Element {
           )}
         </SurfacePanel>
 
-        <SurfacePanel title="AI效果图生成" subtitle="改款预览图 + 三视图 + 展示视频关键帧">
+        <SurfacePanel title="AI效果图生成" subtitle="改款预览图 + 三视图 + 展示视频脚本">
           {result ? (
             <div className={commonStyles.metricGrid}>
               <RenderImageAsset title="改款预览图" asset={result.assets.previewImage} />
@@ -195,15 +195,9 @@ export function RedesignPage(): JSX.Element {
               <RenderImageAsset title="三视图 · Back" asset={result.assets.threeView.back} />
 
               <article className={commonStyles.metricCard}>
-                <h4>展示视频方案 ({result.assets.showcaseVideo.status})</h4>
+                <h4>展示视频脚本 ({result.assets.showcaseVideo.status})</h4>
                 <p>{result.assets.showcaseVideo.script}</p>
-                <ul className={commonStyles.list}>
-                  {result.assets.showcaseVideo.keyframes.map((frame) => (
-                    <li key={frame.label}>
-                      {frame.label}: {frame.prompt}
-                    </li>
-                  ))}
-                </ul>
+                <p className={commonStyles.hint}>当前版本不生成关键帧，仅输出视频脚本。</p>
               </article>
             </div>
           ) : (

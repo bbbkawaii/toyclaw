@@ -211,7 +211,8 @@ describe("redesign routes", () => {
     expect(redesignPayload.packagingSuggestions.length).toBeGreaterThan(1);
     expect(redesignPayload.assets.previewImage.status).toBe("READY");
     expect(redesignPayload.assets.threeView.front.status).toBe("READY");
-    expect(redesignPayload.assets.showcaseVideo.status).toBe("KEYFRAME_READY");
+    expect(redesignPayload.assets.showcaseVideo.status).toBe("SCRIPT_ONLY");
+    expect(redesignPayload.assets.showcaseVideo.keyframes).toHaveLength(0);
     expect(redesignPayload.model.provider).toBe("mock-image");
 
     const getResponse = await app.inject({
@@ -285,4 +286,3 @@ describe("redesign routes", () => {
     expect(response.json().code).toBe("CROSS_CULTURAL_MISMATCH");
   });
 });
-

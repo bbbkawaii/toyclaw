@@ -14,7 +14,6 @@ import { extractedFeaturesSchema } from "../image-input/schemas";
 import type { ExtractedFeatures } from "../image-input/types";
 import {
   buildPreviewAssetPrompt,
-  buildShowcaseKeyframePrompt,
   buildShowcaseVideoScript,
   buildThreeViewAssetPrompt,
   type AssetPromptContext,
@@ -29,7 +28,6 @@ import type {
   RedesignSuggestionResponse,
   ShapeDetailAdjustment,
   ShowcaseVideoAssetResult,
-  ShowcaseVideoKeyframe,
   SuggestionPriority,
   SuggestedColor,
   ThreeViewAssetResult,
@@ -527,7 +525,7 @@ export class RedesignService {
       : this.skippedImageAsset(previewPrompt, "DISABLED_BY_REQUEST");
 
     const threeView = await this.generateThreeViewAssets(context, flags.threeView, referenceImage);
-    const showcaseVideo = await this.generateShowcaseVideoAssets(context, flags.showcaseVideo, referenceImage);
+    const showcaseVideo = await this.generateShowcaseVideoAssets(context, flags.showcaseVideo);
 
     return {
       previewImage,
@@ -565,59 +563,23 @@ export class RedesignService {
   private async generateShowcaseVideoAssets(
     context: AssetPromptContext,
     enabled: boolean,
-    referenceImage: ReferenceImage | undefined,
   ): Promise<ShowcaseVideoAssetResult> {
     const script = buildShowcaseVideoScript(context);
-    const storyBeats: Array<Pick<ShowcaseVideoKeyframe, "label" | "prompt">> = [
-      { label: "hero-orbit", prompt: "opening hero orbit and logo reveal" },
-      { label: "detail-closeup", prompt: "detail close-up on improved accessory and texture" },
-      { label: "packaging-reveal", prompt: "packaging + tagline end frame" },
-    ];
 
     if (!enabled) {
       return {
         status: "SKIPPED",
         script,
-        keyframes: storyBeats,
+        keyframes: [],
         reason: "DISABLED_BY_REQUEST",
       };
     }
 
-    if (!this.deps.imageProvider) {
-      return {
-        status: "SCRIPT_ONLY",
-        script,
-        keyframes: storyBeats,
-        reason: "IMAGE_PROVIDER_NOT_CONFIGURED",
-      };
-    }
-
-    const keyframes = await Promise.all(
-      storyBeats.map(async (frame) => {
-        const prompt = buildShowcaseKeyframePrompt(context, frame);
-        const generated = await this.generateImageAsset(prompt, referenceImage);
-        return {
-          label: frame.label,
-          prompt: frame.prompt,
-          ...(generated.status === "READY"
-            ? {
-                imageBase64: generated.imageBase64,
-                mimeType: generated.mimeType,
-              }
-            : {}),
-        };
-      }),
-    );
-
     return {
-      status: keyframes.some((item) => typeof item.imageBase64 === "string") ? "KEYFRAME_READY" : "SCRIPT_ONLY",
+      status: "SCRIPT_ONLY",
       script,
-      keyframes,
-      ...(keyframes.some((item) => typeof item.imageBase64 === "string")
-        ? {}
-        : {
-            reason: "NO_KEYFRAME_IMAGE_GENERATED",
-          }),
+      keyframes: [],
+      reason: "VIDEO_MODEL_NOT_CONFIGURED",
     };
   }
 
@@ -719,4 +681,3 @@ function normalizeColorHex(value: string): string {
   }
   return "#9CA3AF";
 }
-

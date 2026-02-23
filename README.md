@@ -133,7 +133,7 @@ Returns redesign recommendations:
 - color schemes
 - shape/detail adjustment suggestions
 - packaging style suggestions
-- AI assets: preview image, three-view images, and showcase video storyboard/keyframes
+- AI assets: preview image, three-view images, and showcase video script (no keyframe/video generation model yet)
 
 ### GET `/api/v1/redesign/suggest/:suggestionId`
 
