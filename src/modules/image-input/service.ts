@@ -1,6 +1,7 @@
 import type { MultipartFile } from "@fastify/multipart";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { readFile } from "node:fs/promises";
+import sharp from "sharp";
 import { AppError } from "../../lib/errors";
 import { LocalFileStorage } from "../../lib/storage/local-file";
 import type { VisionProvider } from "../../providers/vision/base";
@@ -20,6 +21,9 @@ interface ImageInputServiceDeps {
 }
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_INFERENCE_DIMENSION = 768;
+const COMPRESS_IF_LARGER_THAN_BYTES = 900 * 1024;
+const MAX_TARGET_BYTES = 1500 * 1024;
 
 export class ImageInputService {
   constructor(private readonly deps: ImageInputServiceDeps) {}
@@ -47,10 +51,10 @@ export class ImageInputService {
     });
 
     try {
-      const imageBuffer = await readFile(stored.absolutePath);
+      const optimizedImage = await this.prepareImageForInference(stored.absolutePath, input.filePart.mimetype);
       const extracted = await this.deps.provider.extractFeatures({
-        imageBase64: imageBuffer.toString("base64"),
-        mimeType: input.filePart.mimetype,
+        imageBase64: optimizedImage.imageBase64,
+        mimeType: optimizedImage.mimeType,
         direction,
       });
 
@@ -177,6 +181,62 @@ export class ImageInputService {
     }
 
     throw new AppError("Either directionText or directionPreset is required", "MISSING_DIRECTION", 400);
+  }
+
+  private async prepareImageForInference(
+    absolutePath: string,
+    originalMimeType: string,
+  ): Promise<{ imageBase64: string; mimeType: string }> {
+    const originalBuffer = await readFile(absolutePath);
+
+    try {
+      const metadata = await sharp(originalBuffer, { failOnError: false }).metadata();
+      const width = metadata.width ?? 0;
+      const height = metadata.height ?? 0;
+      const needsResize = width > MAX_INFERENCE_DIMENSION || height > MAX_INFERENCE_DIMENSION;
+      const needsCompress = originalBuffer.byteLength > COMPRESS_IF_LARGER_THAN_BYTES || originalMimeType === "image/png";
+
+      if (!needsResize && !needsCompress) {
+        return {
+          imageBase64: originalBuffer.toString("base64"),
+          mimeType: originalMimeType,
+        };
+      }
+
+      let optimizedBuffer = await sharp(originalBuffer, { failOnError: false })
+        .rotate()
+        .resize({
+          width: MAX_INFERENCE_DIMENSION,
+          height: MAX_INFERENCE_DIMENSION,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({
+          quality: 72,
+          effort: 4,
+        })
+        .toBuffer();
+
+      if (optimizedBuffer.byteLength > MAX_TARGET_BYTES) {
+        optimizedBuffer = await sharp(optimizedBuffer, { failOnError: false })
+          .webp({
+            quality: 68,
+            effort: 4,
+          })
+          .toBuffer();
+      }
+
+      return {
+        imageBase64: optimizedBuffer.toString("base64"),
+        mimeType: "image/webp",
+      };
+    } catch {
+      // If optimization fails for any reason, fallback to original file to keep request functional.
+      return {
+        imageBase64: originalBuffer.toString("base64"),
+        mimeType: originalMimeType,
+      };
+    }
   }
 
   private toAppError(error: unknown): AppError {

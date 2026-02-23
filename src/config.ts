@@ -1,17 +1,21 @@
 import { z } from "zod";
 
-export const VISION_PROVIDERS = ["sophnet", "openai"] as const;
+export const VISION_PROVIDERS = ["sophnet", "openai", "gemini"] as const;
 export type VisionProviderType = (typeof VISION_PROVIDERS)[number];
 
 export interface AppConfig {
   port: number;
   databaseUrl: string;
+  corsOrigin: string;
   visionProvider: VisionProviderType;
   sophnetApiUrl: string;
   sophnetApiKey?: string;
   sophnetModel: string;
   openaiApiKey?: string;
   openaiModel: string;
+  geminiVisionApiUrl: string;
+  geminiVisionApiKey?: string;
+  geminiVisionModel: string;
   geminiImageApiUrl: string;
   geminiImageApiKey?: string;
   geminiImageModel: string;
@@ -34,18 +38,25 @@ const optionalSecretSchema = z.preprocess(
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().default("file:./dev.db"),
+  CORS_ORIGIN: z.string().default("http://localhost:5173"),
   VISION_PROVIDER: z.enum(VISION_PROVIDERS).default("sophnet"),
   SOPHNET_API_URL: z.string().url().default("https://www.sophnet.com/api/open-apis/v1/chat/completions"),
   SOPHNET_API_KEY: optionalSecretSchema,
   SOPHNET_MODEL: z.string().default("Kimi-K2.5"),
   OPENAI_API_KEY: optionalSecretSchema,
   OPENAI_MODEL: z.string().default("gpt-4.1"),
+  GEMINI_VISION_API_URL: z
+    .string()
+    .url()
+    .default("https://generativelanguage.googleapis.com/v1beta/models"),
+  GEMINI_VISION_API_KEY: optionalSecretSchema,
+  GEMINI_VISION_MODEL: z.string().default("gemini-3-flash-preview"),
   GEMINI_IMAGE_API_URL: z
     .string()
     .url()
     .default("https://generativelanguage.googleapis.com/v1beta/models"),
   GEMINI_IMAGE_API_KEY: optionalSecretSchema,
-  GEMINI_IMAGE_MODEL: z.string().default("models/gemini-3-pro-image-preview"),
+  GEMINI_IMAGE_MODEL: z.string().default("gemini-3-pro-image-preview"),
   UPLOAD_DIR: z.string().default("storage/uploads"),
   MAX_FILE_SIZE_MB: z.coerce.number().int().positive().default(10),
   PROVIDER_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
@@ -64,6 +75,7 @@ export function loadConfigFromEnv(options: LoadConfigOptions = {}): AppConfig {
   }
 
   const effectiveProvider = options.providerOverride ?? parsed.data.VISION_PROVIDER;
+  const effectiveGeminiVisionApiKey = parsed.data.GEMINI_VISION_API_KEY ?? parsed.data.GEMINI_IMAGE_API_KEY;
 
   if (options.requireVisionProviderCredentials) {
     if (effectiveProvider === "sophnet" && !parsed.data.SOPHNET_API_KEY) {
@@ -72,17 +84,24 @@ export function loadConfigFromEnv(options: LoadConfigOptions = {}): AppConfig {
     if (effectiveProvider === "openai" && !parsed.data.OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is required when VISION_PROVIDER=openai");
     }
+    if (effectiveProvider === "gemini" && !effectiveGeminiVisionApiKey) {
+      throw new Error("GEMINI_VISION_API_KEY (or GEMINI_IMAGE_API_KEY) is required when VISION_PROVIDER=gemini");
+    }
   }
 
   return {
     port: parsed.data.PORT,
     databaseUrl: parsed.data.DATABASE_URL,
+    corsOrigin: parsed.data.CORS_ORIGIN,
     visionProvider: parsed.data.VISION_PROVIDER,
     sophnetApiUrl: parsed.data.SOPHNET_API_URL,
     sophnetApiKey: parsed.data.SOPHNET_API_KEY,
     sophnetModel: parsed.data.SOPHNET_MODEL,
     openaiApiKey: parsed.data.OPENAI_API_KEY,
     openaiModel: parsed.data.OPENAI_MODEL,
+    geminiVisionApiUrl: parsed.data.GEMINI_VISION_API_URL,
+    geminiVisionApiKey: effectiveGeminiVisionApiKey,
+    geminiVisionModel: parsed.data.GEMINI_VISION_MODEL,
     geminiImageApiUrl: parsed.data.GEMINI_IMAGE_API_URL,
     geminiImageApiKey: parsed.data.GEMINI_IMAGE_API_KEY,
     geminiImageModel: parsed.data.GEMINI_IMAGE_MODEL,

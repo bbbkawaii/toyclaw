@@ -1,3 +1,4 @@
+import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { PrismaClient } from "@prisma/client";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -13,6 +14,7 @@ import { RedesignService } from "./modules/redesign/service";
 import type { ImageGenerationProvider } from "./providers/image/base";
 import { GeminiImageProvider } from "./providers/image/gemini";
 import type { VisionProvider } from "./providers/vision/base";
+import { GeminiVisionProvider } from "./providers/vision/gemini";
 import { OpenAIVisionProvider } from "./providers/vision/openai";
 import { SophnetVisionProvider } from "./providers/vision/sophnet";
 
@@ -38,6 +40,11 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
   });
 
   registerGlobalErrorHandler(app);
+
+  await app.register(cors, {
+    origin: buildCorsOrigin(config.corsOrigin),
+    credentials: true,
+  });
 
   await app.register(multipart, {
     limits: {
@@ -105,6 +112,15 @@ function createDefaultVisionProvider(config: AppConfig): VisionProvider {
     });
   }
 
+  if (config.visionProvider === "gemini") {
+    return new GeminiVisionProvider({
+      apiBaseUrl: config.geminiVisionApiUrl,
+      apiKey: config.geminiVisionApiKey as string,
+      modelName: config.geminiVisionModel,
+      timeoutMs: config.providerTimeoutMs,
+    });
+  }
+
   return new OpenAIVisionProvider({
     apiKey: config.openaiApiKey as string,
     modelName: config.openaiModel,
@@ -123,4 +139,25 @@ function createDefaultImageGenerationProvider(config: AppConfig): ImageGeneratio
     modelName: config.geminiImageModel,
     timeoutMs: config.providerTimeoutMs,
   });
+}
+
+function buildCorsOrigin(corsOriginValue: string): (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => void {
+  const normalized = corsOriginValue.trim();
+  if (normalized === "*") {
+    return (_origin, cb) => cb(null, true);
+  }
+
+  const allowedOrigins = normalized
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  return (origin, cb) => {
+    // Non-browser clients (curl/server-to-server) often do not send Origin.
+    if (!origin) {
+      cb(null, true);
+      return;
+    }
+    cb(null, allowedOrigins.includes(origin));
+  };
 }

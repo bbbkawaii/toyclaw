@@ -1,4 +1,5 @@
 import { AppError } from "../../lib/errors";
+import { fetchWithProxy } from "../../lib/http/fetch-with-proxy";
 import type {
   ImageGenerationInput,
   ImageGenerationProvider,
@@ -23,7 +24,7 @@ export class GeminiImageProvider implements ImageGenerationProvider {
   constructor(options: GeminiImageProviderOptions) {
     this.apiBaseUrl = options.apiBaseUrl.replace(/\/$/, "");
     this.apiKey = options.apiKey;
-    this.modelName = options.modelName;
+    this.modelName = normalizeModelName(options.modelName);
     this.timeoutMs = options.timeoutMs;
   }
 
@@ -43,7 +44,7 @@ export class GeminiImageProvider implements ImageGenerationProvider {
         });
       }
 
-      const response = await fetch(endpoint, {
+      const response = await fetchWithProxy(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,4 +119,8 @@ export class GeminiImageProvider implements ImageGenerationProvider {
       clearTimeout(timeoutHandle);
     }
   }
+}
+
+function normalizeModelName(modelName: string): string {
+  return modelName.trim().replace(/^models\//i, "");
 }

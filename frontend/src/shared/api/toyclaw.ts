@@ -31,13 +31,13 @@ export interface RedesignSuggestPayload {
 
 export async function postImageAnalyze(payload: ImageAnalyzePayload): Promise<AnalyzeResponse> {
   const formData = new FormData();
-  formData.append("image", payload.image);
   if (payload.directionText && payload.directionText.trim().length > 0) {
     formData.append("directionText", payload.directionText.trim());
   }
   if (payload.directionPreset) {
     formData.append("directionPreset", payload.directionPreset);
   }
+  formData.append("image", payload.image);
 
   try {
     const response = await apiClient.post<AnalyzeResponse>("/image-input/analyze", formData, {
@@ -99,4 +99,3 @@ export async function getRedesignSuggest(suggestionId: string): Promise<Redesign
     throw toApiError(error);
   }
 }
-

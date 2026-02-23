@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const fallbackBaseUrl = "http://localhost:3000/api/v1";
-const fallbackTimeoutMs = 120000;
+const fallbackTimeoutMs = 180000;
 
 function resolveTimeoutMs(): number {
   const raw = import.meta.env.VITE_API_TIMEOUT_MS;

@@ -12,7 +12,7 @@ This repository currently implements the first three modules:
 - Fastify
 - Prisma + SQLite
 - Frontend workspace: React + Vite + Zustand + React Hook Form + Framer Motion
-- Vision provider abstraction (default: Sophnet `Kimi-K2.5`, optional: OpenAI)
+- Vision provider abstraction (supports Gemini/OpenAI/Sophnet; default env points to Gemini `gemini-3-flash-preview`)
 - Image generation provider abstraction (Gemini provider by default when key is configured)
 
 ## Quick start
@@ -37,7 +37,9 @@ Set provider keys in `.env`:
 
 - If `VISION_PROVIDER=sophnet`, configure `SOPHNET_API_KEY`.
 - If `VISION_PROVIDER=openai`, configure `OPENAI_API_KEY`.
+- If `VISION_PROVIDER=gemini`, configure `GEMINI_VISION_API_KEY` (or reuse `GEMINI_IMAGE_API_KEY`).
 - For phase 3 image generation integration, configure `GEMINI_IMAGE_API_KEY`.
+- If frontend is served from another origin, set `CORS_ORIGIN` (e.g. `http://localhost:5173`).
 
 3. Create DB schema:
 
@@ -50,6 +52,8 @@ npm run prisma:push
 ```bash
 npm run dev
 ```
+
+`npm run dev` runs `prisma db push --skip-generate` automatically via `predev`, so schema drift (for example missing `CrossCulturalAnalysis`) is fixed on startup.
 
 ## Frontend workspace
 

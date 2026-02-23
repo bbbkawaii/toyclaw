@@ -58,7 +58,7 @@ export function ImageInputPage(): JSX.Element {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      directionMode: "TEXT",
+      directionMode: "PRESET",
       directionText: "",
       directionPreset: "CHANGE_COLOR",
     },

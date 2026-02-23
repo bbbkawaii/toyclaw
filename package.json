@@ -4,6 +4,7 @@
   "description": "ToyGlobal AI Agent backend",
   "main": "dist/server.js",
   "scripts": {
+    "predev": "prisma db push --skip-generate",
     "dev": "tsx watch src/server.ts",
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "tsc -p tsconfig.json",
@@ -20,10 +21,13 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "@fastify/multipart": "^9.4.0",
     "@prisma/client": "^6.19.2",
     "fastify": "^5.7.4",
     "openai": "^6.22.0",
+    "sharp": "^0.34.5",
+    "undici": "^7.22.0",
     "zod": "^4.3.6",
     "zod-to-json-schema": "^3.25.1"
   },
