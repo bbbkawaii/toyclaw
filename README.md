@@ -5,6 +5,7 @@ This repository currently implements the first three modules:
 - Image input (upload + feature extraction)
 - Cross-cultural analysis (market selection + taboo/festival/competitor analysis)
 - Redesign suggestion (color/shape/packaging recommendations + AI asset generation)
+  - Video output is script-only (no video model / no keyframe generation)
 
 ## Tech stack
 
@@ -13,7 +14,7 @@ This repository currently implements the first three modules:
 - Prisma + SQLite
 - Frontend workspace: React + Vite + Zustand + React Hook Form + Framer Motion
 - Vision provider abstraction (supports Gemini/OpenAI/Sophnet; default env points to Gemini `gemini-3-flash-preview`)
-- Image generation provider abstraction (Gemini provider by default when key is configured)
+- Image generation provider abstraction for preview + three-view (Gemini provider by default when key is configured)
 
 ## Quick start
 
@@ -126,14 +127,19 @@ Fetch stored cross-cultural analysis by analysis ID.
 - `assets` (optional):
   - `previewImage`: boolean
   - `threeView`: boolean
-  - `showcaseVideo`: boolean
+  - `showcaseVideo`: boolean (script output only)
 
 Returns redesign recommendations:
 
 - color schemes
 - shape/detail adjustment suggestions
 - packaging style suggestions
-- AI assets: preview image, three-view images, and showcase video script (no keyframe/video generation model yet)
+- AI assets:
+  - preview image
+  - three-view images
+  - showcase video script only (no keyframe/video generation model)
+  - `showcaseVideo.status` is `SCRIPT_ONLY` or `SKIPPED`
+  - `showcaseVideo.keyframes` is always `[]`
 
 ### GET `/api/v1/redesign/suggest/:suggestionId`
 
