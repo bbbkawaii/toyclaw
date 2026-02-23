@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app";
+import { AppError } from "../src/lib/errors";
 import type { VisionProvider, VisionProviderInput, VisionProviderResult } from "../src/providers/vision/base";
 
 class MockVisionProvider implements VisionProvider {
@@ -54,6 +55,20 @@ class MockVisionProvider implements VisionProvider {
     };
   }
 }
+
+class AlwaysFailVisionProvider implements VisionProvider {
+  readonly providerName = "always-fail";
+  readonly modelName = "always-fail-v1";
+
+  async extractFeatures(): Promise<VisionProviderResult> {
+    throw new AppError("provider unavailable", "PROVIDER_ERROR", 502);
+  }
+}
+
+const VALID_PNG_BUFFER = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aE0AAAAASUVORK5CYII=",
+  "base64",
+);
 
 interface MultipartBuilderInput {
   fields: Record<string, string>;
@@ -257,5 +272,52 @@ describe("image input routes", () => {
     expect(fetched.requestId).toBe(created.requestId);
     expect(fetched.features.colors).toHaveLength(2);
     expect(fetched.input.direction.mode).toBe("TEXT");
+  });
+
+  it("falls back to local extraction when provider fails", async () => {
+    const fallbackApp = await createApp({
+      prisma,
+      visionProvider: new AlwaysFailVisionProvider(),
+      config: {
+        databaseUrl: dbUrl,
+        uploadDir: join(tmpRoot, "fallback-uploads"),
+        openaiModel: "mock-vision-v1",
+        maxFileSizeMb: 10,
+        providerTimeoutMs: 1000,
+        port: 0,
+      },
+    });
+    await fallbackApp.ready();
+
+    const multipart = buildMultipart({
+      fields: {
+        directionText: "做一个节日礼盒版本",
+      },
+      file: {
+        fieldName: "image",
+        filename: "toy.png",
+        contentType: "image/png",
+        data: VALID_PNG_BUFFER,
+      },
+    });
+
+    const response = await fallbackApp.inject({
+      method: "POST",
+      url: "/api/v1/image-input/analyze",
+      payload: multipart.body,
+      headers: {
+        "content-type": multipart.contentType,
+      },
+    });
+
+    await fallbackApp.close();
+
+    expect(response.statusCode).toBe(200);
+    const payload = response.json();
+    expect(payload.model.provider).toBe("local-fallback");
+    expect(payload.model.modelName).toBe("heuristic-v1");
+    expect(payload.features.colors.length).toBeGreaterThan(0);
+    expect(payload.features.material.length).toBeGreaterThan(0);
+    expect(payload.features.style.length).toBeGreaterThan(0);
   });
 });
