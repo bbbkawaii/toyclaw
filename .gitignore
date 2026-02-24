@@ -1,7 +1,8 @@
 node_modules/
 dist/
 coverage/
-storage/
+storage/*
+!storage/compliance-index/
 !src/lib/storage/
 !src/lib/storage/local-file.ts
 .env
