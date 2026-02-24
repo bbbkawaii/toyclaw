@@ -542,13 +542,19 @@ export class RedesignService {
     referenceImage: ReferenceImage | undefined,
   ): Promise<RedesignAssets> {
     const previewPrompt = buildPreviewAssetPrompt(context);
-    const previewImagePromise = flags.previewImage
-      ? this.generateImageAsset(previewPrompt, referenceImage)
-      : Promise.resolve(this.skippedImageAsset(previewPrompt, "DISABLED_BY_REQUEST"));
+    const previewImage = flags.previewImage
+      ? await this.generateImageAsset(previewPrompt, referenceImage)
+      : this.skippedImageAsset(previewPrompt, "DISABLED_BY_REQUEST");
 
-    const [previewImage, threeView, showcaseVideo] = await Promise.all([
-      previewImagePromise,
-      this.generateThreeViewAssets(context, flags.threeView, referenceImage),
+    // Use the preview output as reference for three-view to ensure visual consistency.
+    // Falls back to the original reference if preview didn't produce an image.
+    const threeViewReference: ReferenceImage | undefined =
+      previewImage.status === "READY" && previewImage.imageBase64
+        ? { imageBase64: previewImage.imageBase64, mimeType: previewImage.mimeType ?? "image/png" }
+        : referenceImage;
+
+    const [threeView, showcaseVideo] = await Promise.all([
+      this.generateThreeViewAssets(context, flags.threeView, threeViewReference),
       this.generateShowcaseVideoAssets(context, flags.showcaseVideo),
     ]);
 

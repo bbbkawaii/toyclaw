@@ -62,6 +62,10 @@ Output style:
 - neutral background
 - clean product-centric framing
 - suitable for product spec sheet
+
+Consistency requirement:
+- The reference image shows the finalized redesign. Match its exact colors, proportions, surface details, and accessories.
+- Do NOT invent new features or alter the design. Only change the camera angle to show the ${view} view.
 `.trim();
 }
 
