@@ -936,7 +936,7 @@ function RenderImageAsset({
       {!imageSrc && asset.reason ? (
         <p className={commonStyles.hint}>原因：{toZhAssetReason(asset.reason)}</p>
       ) : null}
-      {asset.status === "FAILED" && onRetry ? (
+      {(asset.status === "FAILED" || asset.status === "SKIPPED") && onRetry ? (
         <div className={commonStyles.buttonRow}>
           <button className={commonStyles.buttonGhost} type="button" disabled={isRetrying || disableRetry} onClick={onRetry}>
             {isRetrying ? "重新生成中..." : "重新生成"}
