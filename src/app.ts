@@ -1,16 +1,21 @@
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
+import * as fs from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import Fastify, { type FastifyInstance } from "fastify";
 import { loadConfigFromEnv, type AppConfig } from "./config";
 import { registerGlobalErrorHandler } from "./lib/error-handler";
 import { LocalFileStorage } from "./lib/storage/local-file";
+import { complianceRoutes } from "./modules/compliance/routes";
+import { ComplianceRetriever } from "./modules/compliance/retriever";
+import { ComplianceService } from "./modules/compliance/service";
 import { crossCulturalRoutes } from "./modules/cross-cultural/routes";
 import { CrossCulturalService } from "./modules/cross-cultural/service";
 import { imageInputRoutes } from "./modules/image-input/routes";
 import { ImageInputService } from "./modules/image-input/service";
 import { redesignRoutes } from "./modules/redesign/routes";
 import { RedesignService } from "./modules/redesign/service";
+import { GeminiEmbeddingProvider } from "./providers/embedding/gemini";
 import type { ImageGenerationProvider } from "./providers/image/base";
 import { GeminiImageProvider } from "./providers/image/gemini";
 import type { VisionProvider } from "./providers/vision/base";
@@ -23,6 +28,7 @@ export interface CreateAppOptions {
   prisma?: PrismaClient;
   visionProvider?: VisionProvider;
   imageGenerationProvider?: ImageGenerationProvider;
+  complianceRetriever?: ComplianceRetriever;
 }
 
 export async function createApp(options: CreateAppOptions = {}): Promise<FastifyInstance> {
@@ -81,6 +87,37 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     uploadDir: config.uploadDir,
     imageProvider: imageGenerationProvider,
   });
+
+  const geminiApiKey = config.geminiImageApiKey ?? config.geminiVisionApiKey ?? "";
+  const canRegisterCompliance = !!(geminiApiKey && (options.complianceRetriever || fs.existsSync(config.complianceIndexDir)));
+
+  if (canRegisterCompliance) {
+    const embeddingProvider = new GeminiEmbeddingProvider({
+      apiBaseUrl: config.geminiVisionApiUrl,
+      apiKey: geminiApiKey,
+      modelName: config.geminiEmbeddingModel,
+      timeoutMs: config.providerTimeoutMs,
+    });
+    const complianceRetriever = options.complianceRetriever ?? new ComplianceRetriever(
+      config.complianceIndexDir,
+      embeddingProvider,
+    );
+    const complianceService = new ComplianceService({
+      prisma,
+      retriever: complianceRetriever,
+      geminiApiBaseUrl: config.geminiVisionApiUrl,
+      geminiApiKey: geminiApiKey,
+      geminiComplianceModel: config.geminiComplianceModel,
+      timeoutMs: config.providerTimeoutMs,
+    });
+
+    await app.register(complianceRoutes, {
+      prefix: "/api/v1/compliance",
+      service: complianceService,
+    });
+  } else {
+    app.log.warn("Compliance module disabled: missing Gemini API key or compliance index");
+  }
 
   await app.register(imageInputRoutes, {
     prefix: "/api/v1/image-input",

@@ -19,6 +19,9 @@ export interface AppConfig {
   geminiImageApiUrl: string;
   geminiImageApiKey?: string;
   geminiImageModel: string;
+  geminiEmbeddingModel: string;
+  geminiComplianceModel: string;
+  complianceIndexDir: string;
   uploadDir: string;
   maxFileSizeMb: number;
   providerTimeoutMs: number;
@@ -57,6 +60,9 @@ const envSchema = z.object({
     .default("https://generativelanguage.googleapis.com/v1beta/models"),
   GEMINI_IMAGE_API_KEY: optionalSecretSchema,
   GEMINI_IMAGE_MODEL: z.string().default("gemini-3-pro-image-preview"),
+  GEMINI_EMBEDDING_MODEL: z.string().default("gemini-embedding-001"),
+  GEMINI_COMPLIANCE_MODEL: z.string().default("gemini-3-flash-preview"),
+  COMPLIANCE_INDEX_DIR: z.string().default("storage/compliance-index"),
   UPLOAD_DIR: z.string().default("storage/uploads"),
   MAX_FILE_SIZE_MB: z.coerce.number().int().positive().default(10),
   PROVIDER_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
@@ -105,6 +111,9 @@ export function loadConfigFromEnv(options: LoadConfigOptions = {}): AppConfig {
     geminiImageApiUrl: parsed.data.GEMINI_IMAGE_API_URL,
     geminiImageApiKey: parsed.data.GEMINI_IMAGE_API_KEY,
     geminiImageModel: parsed.data.GEMINI_IMAGE_MODEL,
+    geminiEmbeddingModel: parsed.data.GEMINI_EMBEDDING_MODEL,
+    geminiComplianceModel: parsed.data.GEMINI_COMPLIANCE_MODEL,
+    complianceIndexDir: parsed.data.COMPLIANCE_INDEX_DIR,
     uploadDir: parsed.data.UPLOAD_DIR,
     maxFileSizeMb: parsed.data.MAX_FILE_SIZE_MB,
     providerTimeoutMs: parsed.data.PROVIDER_TIMEOUT_MS,
