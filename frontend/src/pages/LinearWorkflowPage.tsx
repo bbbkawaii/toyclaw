@@ -351,6 +351,14 @@ export function LinearWorkflowPage(): JSX.Element {
 
   const highPriorityCount = redesign?.shapeAdjustments.filter((item) => item.priority === "HIGH").length ?? 0;
   const previewStatus = redesign ? toImageAssetStatusLabel(redesign.assets.previewImage.status) : "暂无";
+  const hasFailedRedesignImages = redesign
+    ? [
+        redesign.assets.previewImage,
+        redesign.assets.threeView.front,
+        redesign.assets.threeView.side,
+        redesign.assets.threeView.back,
+      ].some((asset) => asset.status === "FAILED")
+    : false;
 
   return (
     <motion.div className={commonStyles.stack} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -656,6 +664,18 @@ export function LinearWorkflowPage(): JSX.Element {
                 </button>
               </div>
             ) : null}
+            {analysisId && !redesignError && hasFailedRedesignImages ? (
+              <div className={commonStyles.buttonRow}>
+                <button
+                  className={commonStyles.buttonGhost}
+                  type="button"
+                  disabled={isGeneratingRedesign}
+                  onClick={() => void runRedesignGeneration()}
+                >
+                  {isGeneratingRedesign ? "重新生成中..." : "重新生成图片"}
+                </button>
+              </div>
+            ) : null}
           </div>
         </SurfacePanel>
 
@@ -731,11 +751,38 @@ export function LinearWorkflowPage(): JSX.Element {
                   </section>
                   <section className={styles.detailsSection}>
                     <h4>智能资产</h4>
+                    {hasFailedRedesignImages ? (
+                      <p className={commonStyles.hint}>部分图片生成失败，可点击“重新生成图片”手动重试。</p>
+                    ) : null}
                     <div className={styles.assetGrid}>
-                      <RenderImageAsset title="预览图" asset={redesign.assets.previewImage} onImageClick={setLightboxSrc} />
-                      <RenderImageAsset title="正视图" asset={redesign.assets.threeView.front} onImageClick={setLightboxSrc} />
-                      <RenderImageAsset title="侧视图" asset={redesign.assets.threeView.side} onImageClick={setLightboxSrc} />
-                      <RenderImageAsset title="背视图" asset={redesign.assets.threeView.back} onImageClick={setLightboxSrc} />
+                      <RenderImageAsset
+                        title="预览图"
+                        asset={redesign.assets.previewImage}
+                        onImageClick={setLightboxSrc}
+                        onRetry={() => void runRedesignGeneration()}
+                        isRetrying={isGeneratingRedesign}
+                      />
+                      <RenderImageAsset
+                        title="正视图"
+                        asset={redesign.assets.threeView.front}
+                        onImageClick={setLightboxSrc}
+                        onRetry={() => void runRedesignGeneration()}
+                        isRetrying={isGeneratingRedesign}
+                      />
+                      <RenderImageAsset
+                        title="侧视图"
+                        asset={redesign.assets.threeView.side}
+                        onImageClick={setLightboxSrc}
+                        onRetry={() => void runRedesignGeneration()}
+                        isRetrying={isGeneratingRedesign}
+                      />
+                      <RenderImageAsset
+                        title="背视图"
+                        asset={redesign.assets.threeView.back}
+                        onImageClick={setLightboxSrc}
+                        onRetry={() => void runRedesignGeneration()}
+                        isRetrying={isGeneratingRedesign}
+                      />
                     </div>
                     <p className={commonStyles.hint}>
                       展示脚本：{toShowcaseVideoStatusLabel(redesign.assets.showcaseVideo.status)}
@@ -794,10 +841,14 @@ function RenderImageAsset({
   title,
   asset,
   onImageClick,
+  onRetry,
+  isRetrying = false,
 }: {
   title: string;
   asset: ImageAssetResult;
   onImageClick: (src: string) => void;
+  onRetry?: () => void;
+  isRetrying?: boolean;
 }): JSX.Element {
   const imageSrc =
     asset.imageBase64 && asset.status === "READY"
@@ -826,6 +877,13 @@ function RenderImageAsset({
       ) : null}
       {!imageSrc && asset.reason ? (
         <p className={commonStyles.hint}>原因：{toZhAssetReason(asset.reason)}</p>
+      ) : null}
+      {asset.status === "FAILED" && onRetry ? (
+        <div className={commonStyles.buttonRow}>
+          <button className={commonStyles.buttonGhost} type="button" disabled={isRetrying} onClick={onRetry}>
+            {isRetrying ? "重新生成中..." : "重新生成"}
+          </button>
+        </div>
       ) : null}
     </article>
   );
