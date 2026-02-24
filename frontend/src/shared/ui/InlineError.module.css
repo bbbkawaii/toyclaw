@@ -1,7 +1,8 @@
 .errorBox {
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid rgba(255, 108, 140, 0.3);
+  border-left: 3px solid var(--danger);
+  background: rgba(255, 108, 140, 0.08);
   padding: 10px 12px;
   display: grid;
   gap: 5px;
@@ -10,12 +11,13 @@
 .message {
   margin: 0;
   font-weight: 600;
-  color: color-mix(in srgb, var(--danger) 80%, white);
+  color: var(--danger);
 }
 
 .meta {
   margin: 0;
   font-size: 0.76rem;
-  color: color-mix(in srgb, var(--ink-soft) 85%, white);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
 }
-

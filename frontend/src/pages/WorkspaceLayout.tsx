@@ -90,25 +90,6 @@ export function WorkspaceLayout(): JSX.Element {
           <LinearWorkflowPage />
         </motion.main>
 
-        <aside className={styles.summary}>
-          <section className={styles.summaryPanel}>
-            <h3 className={styles.summaryTitle}>流程状态</h3>
-            <dl className={styles.metaList}>
-              <div>
-                <dt>请求编号</dt>
-                <dd>{state.requestId ? "已创建" : "未创建"}</dd>
-              </div>
-              <div>
-                <dt>分析编号</dt>
-                <dd>{state.analysisId ? "已创建" : "未创建"}</dd>
-              </div>
-              <div>
-                <dt>建议编号</dt>
-                <dd>{state.suggestionId ? "已创建" : "未创建"}</dd>
-              </div>
-            </dl>
-          </section>
-        </aside>
       </div>
     </div>
   );

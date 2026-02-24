@@ -15,6 +15,7 @@
 
 .label {
   font-size: 0.78rem;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--ink-soft);
@@ -22,6 +23,8 @@
 
 .hint {
   font-size: 0.73rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
   color: var(--ink-dim);
 }
 
@@ -30,10 +33,29 @@
 .select {
   width: 100%;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-  background: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
   color: var(--ink);
   padding: 10px 12px;
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 2px rgba(88, 241, 255, 0.15);
+}
+
+.select {
+  appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%237f8ac8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 
 .textarea {
@@ -53,52 +75,81 @@
   border-radius: 11px;
   padding: 10px 16px;
   cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition:
+    transform var(--duration-fast) var(--ease-spring),
+    box-shadow var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
 }
 
 .buttonPrimary {
-  border: 1px solid color-mix(in srgb, var(--accent-1) 70%, transparent);
-  color: #08122d;
-  font-weight: 700;
-  background: linear-gradient(120deg, var(--accent-1), var(--accent-3) 70%);
+  border: 1px solid var(--accent-1);
+  color: var(--bg-base);
+  background: var(--accent-1);
 }
 
 .buttonGhost {
-  border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent);
+  border: 1px solid var(--line-strong);
   color: var(--ink);
-  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  background: var(--panel);
 }
 
-.buttonPrimary:hover,
+.buttonPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(88, 241, 255, 0.2);
+}
+
 .buttonGhost:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 24px color-mix(in srgb, var(--bg-base) 50%, black);
+  border-color: var(--accent-1);
+  background: var(--panel-2);
 }
 
 .buttonPrimary:disabled,
 .buttonGhost:disabled {
   cursor: not-allowed;
-  filter: grayscale(0.3);
-  opacity: 0.7;
+  opacity: 0.5;
   transform: none;
   box-shadow: none;
 }
 
 .radioRow {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .radioItem {
-  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 8px 14px;
   display: inline-flex;
-  gap: 6px;
+  gap: 0;
   align-items: center;
-  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  background: var(--panel);
   font-size: 0.84rem;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.radioItem input {
+  appearance: none;
+  width: 0;
+  height: 0;
+  position: absolute;
+  opacity: 0;
+}
+
+.radioItem:has(input:checked) {
+  background: var(--accent-1);
+  border-color: var(--accent-1);
+  color: var(--bg-base);
+  font-weight: 600;
 }
 
 .split {
@@ -114,14 +165,15 @@
 
 .metricCard {
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
-  background: color-mix(in srgb, var(--panel) 60%, transparent);
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
   padding: 9px 10px;
 }
 
 .metricCard h4 {
   margin: 0 0 4px;
   font-size: 0.82rem;
+  font-family: var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -143,10 +195,11 @@
 }
 
 .colorSwatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  border: 1px solid color-mix(in srgb, var(--ink) 50%, transparent);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid var(--line-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .list {
@@ -161,4 +214,3 @@
     grid-template-columns: 1fr;
   }
 }
-

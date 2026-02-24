@@ -11,6 +11,7 @@ export function LoadingPulse({ label = "处理中..." }: LoadingPulseProps): JSX
       <span className={styles.dot} />
       <span className={styles.dot} />
       <span className={styles.dot} />
+      <span className={styles.scanLine} />
       <span className={styles.label}>{label}</span>
     </div>
   );

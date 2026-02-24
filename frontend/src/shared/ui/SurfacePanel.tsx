@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import type { JSX, PropsWithChildren, ReactNode } from "react";
 import styles from "./SurfacePanel.module.css";
 
@@ -9,7 +10,13 @@ interface SurfacePanelProps extends PropsWithChildren {
 
 export function SurfacePanel({ title, subtitle, rightSlot, children }: SurfacePanelProps): JSX.Element {
   return (
-    <section className={styles.panel}>
+    <motion.section
+      className={styles.panel}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    >
       <header className={styles.header}>
         <div>
           <h2 className={styles.title}>{title}</h2>
@@ -18,6 +25,6 @@ export function SurfacePanel({ title, subtitle, rightSlot, children }: SurfacePa
         {rightSlot ? <div>{rightSlot}</div> : null}
       </header>
       <div className={styles.body}>{children}</div>
-    </section>
+    </motion.section>
   );
 }

@@ -1,21 +1,81 @@
 .sectionAnchor {
   scroll-margin-top: 18px;
+  display: grid;
+  gap: 10px;
 }
 
-.previewImage {
+.dropZone {
+  border: 2px dashed var(--line-strong);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  padding: 32px 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease;
+}
+
+.dropZone:hover {
+  border-color: var(--accent-1);
+  background: var(--panel);
+}
+
+.dropZoneActive {
+  border-color: var(--accent-1);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--accent-1);
+}
+
+.dropZoneHasFile {
+  padding: 8px;
+}
+
+.dropZoneInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dropZoneContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.dropZoneIcon {
+  font-size: 1.6rem;
+  opacity: 0.5;
+}
+
+.dropZoneText {
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+}
+
+.dropZonePreview {
   width: 100%;
   max-width: 360px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--line) 56%, transparent);
+  border-radius: 10px;
+  border: 1px solid var(--line);
 }
 
 .stepBanner {
   border-radius: 10px;
-  border: 1px dashed color-mix(in srgb, var(--line-strong) 56%, transparent);
-  background: color-mix(in srgb, var(--panel-2) 74%, transparent);
-  color: var(--ink-soft);
+  border: 1px dashed var(--line-strong);
+  background: var(--panel-2);
+  color: var(--ink-dim);
   padding: 8px 10px;
   font-size: 0.8rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
 }
 
 .statusWrap {
@@ -31,34 +91,37 @@
 
 .summaryCard {
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
-  background: color-mix(in srgb, var(--panel) 64%, transparent);
-  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  padding: 14px 16px;
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .summaryLabel {
+  font-family: var(--font-mono);
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--ink-dim);
 }
 
 .summaryCard strong {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
 }
 
 .summaryMeta {
+  font-family: var(--font-mono);
   font-size: 0.76rem;
   color: var(--ink-soft);
+  letter-spacing: 0.02em;
 }
 
 .details {
   margin-top: 10px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 48%, transparent);
-  background: color-mix(in srgb, var(--panel) 48%, transparent);
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
   overflow: hidden;
 }
 
@@ -66,8 +129,15 @@
   cursor: pointer;
   padding: 10px 12px;
   font-size: 0.84rem;
-  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--accent-1);
   list-style: none;
+  transition: color var(--duration-fast) ease;
+}
+
+.detailsSummary:hover {
+  color: var(--ink);
 }
 
 .detailsSummary::-webkit-details-marker {
@@ -78,14 +148,15 @@
   content: "▾";
   float: right;
   opacity: 0.7;
+  transition: transform var(--duration-base) ease;
 }
 
 .details[open] .detailsSummary::after {
-  content: "▴";
+  transform: rotate(180deg);
 }
 
 .detailsBody {
-  border-top: 1px solid color-mix(in srgb, var(--line) 38%, transparent);
+  border-top: 1px solid var(--line);
   padding: 10px 12px 12px;
   display: grid;
   gap: 10px;
@@ -99,8 +170,9 @@
 .detailsSection h4 {
   margin: 0;
   font-size: 0.78rem;
+  font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--ink-soft);
 }
 
@@ -129,7 +201,59 @@
   margin-top: 8px;
   width: 100%;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 44%, transparent);
+  border: 1px solid var(--line);
+  cursor: zoom-in;
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+
+.assetImage:hover {
+  transform: scale(1.03);
+}
+
+.lightboxOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  cursor: pointer;
+}
+
+.lightboxImage {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  cursor: default;
+  object-fit: contain;
+}
+
+.lightboxClose {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--ink);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+
+.lightboxClose:hover {
+  background: var(--panel-2);
+  border-color: var(--accent-1);
 }
 
 @media (max-width: 900px) {
@@ -139,5 +263,14 @@
 
   .assetGrid {
     grid-template-columns: 1fr;
+  }
+
+  .dropZone {
+    padding: 24px 16px;
+    min-height: 100px;
+  }
+
+  .lightboxOverlay {
+    padding: 20px;
   }
 }

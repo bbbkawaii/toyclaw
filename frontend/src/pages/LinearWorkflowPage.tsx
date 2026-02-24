@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type JSX } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { ApiError, type ApiError as ApiErrorType, toApiError } from "../shared/api/errors";
@@ -83,6 +83,18 @@ const crossFormSchema = z.object({
 type ImageFormValues = z.infer<typeof imageFormSchema>;
 type CrossFormValues = z.infer<typeof crossFormSchema>;
 
+const staggerContainer = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } },
+};
+
 function scrollToStep(stepId: string): void {
   const section = document.getElementById(stepId);
   if (section) {
@@ -112,7 +124,11 @@ export function LinearWorkflowPage(): JSX.Element {
   const [redesignError, setRedesignError] = useState<ApiErrorType | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const autoTriggeredAnalysisIdRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dragCounterRef = useRef(0);
 
   const imageForm = useForm<ImageFormValues>({
     resolver: zodResolver(imageFormSchema),
@@ -132,6 +148,8 @@ export function LinearWorkflowPage(): JSX.Element {
 
   const directionMode = imageForm.watch("directionMode");
   const fileList = imageForm.watch("image");
+
+  const { ref: formRef, ...imageRegisterRest } = imageForm.register("image");
 
   useEffect(() => {
     if (!fileList || fileList.length === 0) {
@@ -286,6 +304,43 @@ export function LinearWorkflowPage(): JSX.Element {
     }
   });
 
+  const handleDragOver = (e: DragEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) {
+      setDragActive(true);
+    }
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setDragActive(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && fileInputRef.current) {
+      fileInputRef.current.files = files;
+      imageForm.setValue("image", files, { shouldValidate: true });
+    }
+  };
+
   const featureSummary = useMemo(() => imageResult?.features, [imageResult]);
   const crossResult = crossCulturalResult;
   const redesign = redesignResult;
@@ -303,30 +358,51 @@ export function LinearWorkflowPage(): JSX.Element {
         <SurfacePanel title="第一步：输入" rightSlot={<span className="pill">Step 01</span>}>
           <form className={commonStyles.form} onSubmit={onSubmitImage}>
             <div className={commonStyles.field}>
-              <label className={commonStyles.label} htmlFor="image-file">
-                图片
-              </label>
-              <input
-                id="image-file"
-                className={commonStyles.input}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                {...imageForm.register("image")}
-              />
-              <span className={commonStyles.hint}>jpg/png/webp · ≤10MB</span>
+              <label className={commonStyles.label} htmlFor="image-file">图片</label>
+              <div
+                className={`${styles.dropZone} ${dragActive ? styles.dropZoneActive : ""} ${previewUrl ? styles.dropZoneHasFile : ""}`}
+                role="button"
+                tabIndex={0}
+                aria-label="选择或拖拽上传图片"
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+              >
+                <input
+                  id="image-file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className={styles.dropZoneInput}
+                  ref={(el) => {
+                    formRef(el);
+                    fileInputRef.current = el;
+                  }}
+                  {...imageRegisterRest}
+                />
+                {previewUrl ? (
+                  <img src={previewUrl} alt="上传预览" className={styles.dropZonePreview} />
+                ) : (
+                  <div className={styles.dropZoneContent}>
+                    <span className={styles.dropZoneIcon}>⬆</span>
+                    <span className={styles.dropZoneText}>拖拽图片到此处，或点击选择</span>
+                    <span className={commonStyles.hint}>jpg/png/webp · ≤10MB</span>
+                  </div>
+                )}
+              </div>
               {imageForm.formState.errors.image ? (
                 <span className={commonStyles.hint} style={{ color: "var(--danger)" }}>
                   {imageForm.formState.errors.image.message}
                 </span>
               ) : null}
             </div>
-
-            {previewUrl ? (
-              <div className={commonStyles.field}>
-                <span className={commonStyles.label}>预览</span>
-                <img src={previewUrl} alt="上传预览" className={styles.previewImage} />
-              </div>
-            ) : null}
 
             <div className={commonStyles.field}>
               <span className={commonStyles.label}>方向</span>
@@ -387,25 +463,30 @@ export function LinearWorkflowPage(): JSX.Element {
         <SurfacePanel title="第一步结果">
           {featureSummary ? (
             <>
-              <div className={styles.summaryGrid}>
-                <article className={styles.summaryCard}>
+              <motion.div
+                className={styles.summaryGrid}
+                variants={staggerContainer}
+                initial="hidden"
+                animate="show"
+              >
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>形状</span>
                   <strong>{toZhFeatureTerm(featureSummary.shape.category)}</strong>
                   <span className={styles.summaryMeta}>{Math.round(featureSummary.shape.confidence * 100)}%</span>
-                </article>
-                <article className={styles.summaryCard}>
+                </motion.article>
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>主色</span>
                   <strong>{toZhColorName(featureSummary.colors[0]?.name ?? "未知")}</strong>
                   <span className={styles.summaryMeta}>{featureSummary.colors.length} 色</span>
-                </article>
-                <article className={styles.summaryCard}>
+                </motion.article>
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>风格/材质</span>
                   <strong>
                     {featureSummary.style.length}/{featureSummary.material.length}
                   </strong>
                   <span className={styles.summaryMeta}>条目数</span>
-                </article>
-              </div>
+                </motion.article>
+              </motion.div>
 
               <details className={styles.details}>
                 <summary className={styles.detailsSummary}>查看明细</summary>
@@ -481,20 +562,25 @@ export function LinearWorkflowPage(): JSX.Element {
         <SurfacePanel title="第二步结果">
           {crossResult ? (
             <>
-              <div className={styles.summaryGrid}>
-                <article className={styles.summaryCard}>
+              <motion.div
+                className={styles.summaryGrid}
+                variants={staggerContainer}
+                initial="hidden"
+                animate="show"
+              >
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>禁忌命中</span>
                   <strong>{tabooHitCount}</strong>
                   <span className={styles.summaryMeta}>项</span>
-                </article>
-                <article className={styles.summaryCard}>
+                </motion.article>
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>Top 主题</span>
                   <strong>{topTheme ? toZhFestivalName(topTheme.themeId, topTheme.name) : "暂无"}</strong>
                   <span className={styles.summaryMeta}>
                     {topTheme ? `${Math.round(topTheme.relevance * 100)}%` : "-"}
                   </span>
-                </article>
-                <article className={styles.summaryCard}>
+                </motion.article>
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>Top 竞品</span>
                   <strong>
                     {topCompetitor
@@ -504,8 +590,8 @@ export function LinearWorkflowPage(): JSX.Element {
                   <span className={styles.summaryMeta}>
                     {topCompetitor ? `${Math.round(topCompetitor.matchingScore * 100)}%` : "-"}
                   </span>
-                </article>
-              </div>
+                </motion.article>
+              </motion.div>
 
               <details className={styles.details}>
                 <summary className={styles.detailsSummary}>查看明细</summary>
@@ -576,23 +662,28 @@ export function LinearWorkflowPage(): JSX.Element {
         <SurfacePanel title="第三步结果">
           {redesign ? (
             <>
-              <div className={styles.summaryGrid}>
-                <article className={styles.summaryCard}>
+              <motion.div
+                className={styles.summaryGrid}
+                variants={staggerContainer}
+                initial="hidden"
+                animate="show"
+              >
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>配色方案</span>
                   <strong>{redesign.colorSchemes.length}</strong>
                   <span className={styles.summaryMeta}>组</span>
-                </article>
-                <article className={styles.summaryCard}>
+                </motion.article>
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>高优动作</span>
                   <strong>{highPriorityCount}</strong>
                   <span className={styles.summaryMeta}>项</span>
-                </article>
-                <article className={styles.summaryCard}>
+                </motion.article>
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
                   <span className={styles.summaryLabel}>预览图状态</span>
                   <strong>{previewStatus}</strong>
                   <span className={styles.summaryMeta}>自动生成</span>
-                </article>
-              </div>
+                </motion.article>
+              </motion.div>
 
               <details className={styles.details}>
                 <summary className={styles.detailsSummary}>查看明细</summary>
@@ -641,10 +732,10 @@ export function LinearWorkflowPage(): JSX.Element {
                   <section className={styles.detailsSection}>
                     <h4>智能资产</h4>
                     <div className={styles.assetGrid}>
-                      <RenderImageAsset title="预览图" asset={redesign.assets.previewImage} />
-                      <RenderImageAsset title="正视图" asset={redesign.assets.threeView.front} />
-                      <RenderImageAsset title="侧视图" asset={redesign.assets.threeView.side} />
-                      <RenderImageAsset title="背视图" asset={redesign.assets.threeView.back} />
+                      <RenderImageAsset title="预览图" asset={redesign.assets.previewImage} onImageClick={setLightboxSrc} />
+                      <RenderImageAsset title="正视图" asset={redesign.assets.threeView.front} onImageClick={setLightboxSrc} />
+                      <RenderImageAsset title="侧视图" asset={redesign.assets.threeView.side} onImageClick={setLightboxSrc} />
+                      <RenderImageAsset title="背视图" asset={redesign.assets.threeView.back} onImageClick={setLightboxSrc} />
                     </div>
                     <p className={commonStyles.hint}>
                       展示脚本：{toShowcaseVideoStatusLabel(redesign.assets.showcaseVideo.status)}
@@ -658,11 +749,56 @@ export function LinearWorkflowPage(): JSX.Element {
           )}
         </SurfacePanel>
       </section>
+
+      <AnimatePresence>
+        {lightboxSrc ? (
+          <motion.div
+            className={styles.lightboxOverlay}
+            role="dialog"
+            aria-modal="true"
+            aria-label="图片放大查看"
+            tabIndex={-1}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={() => setLightboxSrc(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setLightboxSrc(null);
+              }
+            }}
+            ref={(el) => el?.focus()}
+          >
+            <motion.img
+              src={lightboxSrc}
+              alt="放大查看"
+              className={styles.lightboxImage}
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button className={styles.lightboxClose} type="button" onClick={() => setLightboxSrc(null)}>
+              ✕
+            </button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
-function RenderImageAsset({ title, asset }: { title: string; asset: ImageAssetResult }): JSX.Element {
+function RenderImageAsset({
+  title,
+  asset,
+  onImageClick,
+}: {
+  title: string;
+  asset: ImageAssetResult;
+  onImageClick: (src: string) => void;
+}): JSX.Element {
   const imageSrc =
     asset.imageBase64 && asset.status === "READY"
       ? `data:${asset.mimeType ?? "image/png"};base64,${asset.imageBase64}`
@@ -672,7 +808,22 @@ function RenderImageAsset({ title, asset }: { title: string; asset: ImageAssetRe
     <article className={commonStyles.metricCard}>
       <h4>{title}</h4>
       <p className={commonStyles.hint}>{toImageAssetStatusLabel(asset.status)}</p>
-      {imageSrc ? <img src={imageSrc} alt={title} className={styles.assetImage} /> : null}
+      {imageSrc ? (
+        <img
+          src={imageSrc}
+          alt={`${title} - 点击放大`}
+          className={styles.assetImage}
+          role="button"
+          tabIndex={0}
+          onClick={() => onImageClick(imageSrc)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onImageClick(imageSrc);
+            }
+          }}
+        />
+      ) : null}
       {!imageSrc && asset.reason ? (
         <p className={commonStyles.hint}>原因：{toZhAssetReason(asset.reason)}</p>
       ) : null}

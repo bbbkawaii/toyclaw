@@ -14,10 +14,7 @@ body,
 body {
   font-family: var(--font-body);
   color: var(--ink);
-  background:
-    radial-gradient(1200px 700px at 8% -10%, color-mix(in srgb, var(--accent-2) 40%, transparent), transparent 48%),
-    radial-gradient(900px 540px at 92% -15%, color-mix(in srgb, var(--accent-1) 44%, transparent), transparent 46%),
-    linear-gradient(160deg, #060c1e, #121836 45%, #170f36 100%);
+  background: var(--bg-base);
   line-height: 1.45;
 }
 
@@ -27,24 +24,11 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(color-mix(in srgb, var(--line) 14%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 14%, transparent) 1px, transparent 1px);
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 34px 34px;
-  mask-image: radial-gradient(circle at center, black 42%, transparent 95%);
-  opacity: 0.4;
+  opacity: 0.15;
   z-index: -2;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(color-mix(in srgb, var(--ink) 20%, transparent) 1px, transparent 1px);
-  background-size: 5px 5px;
-  mix-blend-mode: overlay;
-  opacity: 0.22;
-  z-index: -1;
 }
 
 a {
@@ -72,9 +56,9 @@ select {
   letter-spacing: 0.11em;
   text-transform: uppercase;
   font-size: clamp(1.28rem, 2vw + 0.9rem, 2.14rem);
-  text-shadow:
-    0 0 18px color-mix(in srgb, var(--accent-1) 45%, transparent),
-    0 0 28px color-mix(in srgb, var(--accent-2) 35%, transparent);
+  border-bottom: 2px solid var(--accent-1);
+  display: inline-block;
+  padding-bottom: 4px;
 }
 
 .muted {
@@ -87,9 +71,11 @@ select {
   gap: 8px;
   border-radius: 999px;
   padding: 6px 11px;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent);
-  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
   font-size: 0.78rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
 }
 
 .grid-two {
@@ -110,20 +96,20 @@ select {
 .tag-list li {
   border-radius: 999px;
   padding: 4px 10px;
-  background: color-mix(in srgb, var(--panel-2) 66%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
   font-size: 0.76rem;
   color: var(--ink-soft);
 }
 
 .kbd {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 0.68rem;
   letter-spacing: 0.07em;
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 2px 6px;
-  background: color-mix(in srgb, var(--panel) 70%, black);
+  background: var(--panel);
 }
 
 @media (max-width: 900px) {
@@ -136,4 +122,3 @@ select {
     grid-template-columns: 1fr;
   }
 }
-

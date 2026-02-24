@@ -1,15 +1,16 @@
-@import url("https://fonts.googleapis.com/css2?family=Audiowide&family=Urbanist:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Audiowide&family=Urbanist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
 
 :root {
   --font-display: "Audiowide", "Segoe UI", sans-serif;
   --font-body: "Urbanist", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
 
   --bg-base: #0a1024;
   --bg-elevated: #0f1733;
-  --panel: #1a2552;
-  --panel-2: #2c1f5d;
-  --line: #5a6cc9;
-  --line-strong: #8ea0ff;
+  --panel: #141a30;
+  --panel-2: #1c1835;
+  --line: #2a3358;
+  --line-strong: #3d4a7a;
 
   --ink: #f6f8ff;
   --ink-soft: #a9b3e6;
@@ -24,5 +25,10 @@
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
-}
 
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+  --duration-slow: 500ms;
+}
