@@ -2,6 +2,8 @@ node_modules/
 dist/
 coverage/
 storage/
+!src/lib/storage/
+!src/lib/storage/local-file.ts
 .env
 frontend/.env
 *.log

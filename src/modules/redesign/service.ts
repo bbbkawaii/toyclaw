@@ -829,6 +829,9 @@ export class RedesignService {
         return withReference.asset;
       }
       latestError = withReference.error;
+      if (this.isImageProviderTimeout(withReference.error)) {
+        return this.toFailedImageAsset(prompt, withReference.error);
+      }
     }
 
     const textOnly = await this.generateImageAttempt({
@@ -839,11 +842,19 @@ export class RedesignService {
     }
     latestError = textOnly.error ?? latestError;
 
-    if (latestError instanceof Error) {
+    return this.toFailedImageAsset(prompt, latestError);
+  }
+
+  private isImageProviderTimeout(error: unknown): boolean {
+    return error instanceof AppError && error.code === "IMAGE_PROVIDER_TIMEOUT";
+  }
+
+  private toFailedImageAsset(prompt: string, error: unknown): ImageAssetResult {
+    if (error instanceof Error) {
       return {
         status: "FAILED",
         prompt,
-        reason: latestError.message,
+        reason: error.message,
       };
     }
 
