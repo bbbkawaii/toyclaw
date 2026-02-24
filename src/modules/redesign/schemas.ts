@@ -17,6 +17,10 @@ export const redesignSuggestParamsSchema = z.object({
   suggestionId: z.string().uuid(),
 });
 
+export const redesignRetryAssetBodySchema = z.object({
+  asset: z.enum(["previewImage", "threeView.front", "threeView.side", "threeView.back"]),
+});
+
 const suggestedColorSchema = z.object({
   name: z.string().min(1),
   hex: z

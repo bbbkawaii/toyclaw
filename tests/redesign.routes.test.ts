@@ -114,6 +114,34 @@ class PreviewFailingImageProvider implements ImageGenerationProvider {
   }
 }
 
+class FrontRetryOnlyImageProvider implements ImageGenerationProvider {
+  readonly providerName = "front-retry-only";
+  readonly modelName = "front-retry-only-v1";
+  readonly calls: Array<{ prompt: string; referenceImageBase64?: string }> = [];
+  private frontFailureBudget = 2;
+
+  async generatePreview(input: ImageGenerationInput): Promise<ImageGenerationResult> {
+    this.calls.push({
+      prompt: input.prompt,
+      referenceImageBase64: input.referenceImageBase64,
+    });
+
+    if (input.prompt.includes("front view technical render") && this.frontFailureBudget > 0) {
+      this.frontFailureBudget--;
+      return {
+        rawResponse: { mocked: true, frontFailed: true },
+      };
+    }
+
+    const digest = Buffer.from(`img-${this.calls.length}`, "utf8").toString("base64");
+    return {
+      imageBase64: digest,
+      mimeType: "image/png",
+      rawResponse: { mocked: true },
+    };
+  }
+}
+
 class ReferenceSensitiveImageProvider implements ImageGenerationProvider {
   readonly providerName = "reference-sensitive";
   readonly modelName = "reference-sensitive-v1";
@@ -596,5 +624,107 @@ describe("redesign routes", () => {
       expect(call.prompt).toContain("original toy before redesign");
       expect(call.prompt).not.toContain("finalized redesign");
     }
+  });
+
+  it("retries only the selected failed asset instead of regenerating all images", async () => {
+    const provider = new FrontRetryOnlyImageProvider();
+    const retryApp = await createApp({
+      prisma,
+      visionProvider: new MockVisionProvider(),
+      imageGenerationProvider: provider,
+      config: {
+        databaseUrl: dbUrl,
+        uploadDir: join(tmpRoot, "retry-single-uploads"),
+        openaiModel: "mock-vision-v1",
+        maxFileSizeMb: 10,
+        providerTimeoutMs: 1000,
+        port: 0,
+      },
+    });
+    await retryApp.ready();
+
+    const multipart = buildMultipart({
+      fields: { directionPreset: "CHANGE_COLOR" },
+      file: {
+        fieldName: "image",
+        filename: "toy.png",
+        contentType: "image/png",
+        data: VALID_PNG_BUFFER,
+      },
+    });
+
+    const imageResponse = await retryApp.inject({
+      method: "POST",
+      url: "/api/v1/image-input/analyze",
+      payload: multipart.body,
+      headers: { "content-type": multipart.contentType },
+    });
+    expect(imageResponse.statusCode).toBe(200);
+    const imagePayload = imageResponse.json();
+
+    const crossResponse = await retryApp.inject({
+      method: "POST",
+      url: "/api/v1/cross-cultural/analyze",
+      payload: {
+        requestId: imagePayload.requestId,
+        targetMarket: "US",
+      },
+    });
+    expect(crossResponse.statusCode).toBe(200);
+    const crossPayload = crossResponse.json();
+
+    const initialResponse = await retryApp.inject({
+      method: "POST",
+      url: "/api/v1/redesign/suggest",
+      payload: {
+        requestId: imagePayload.requestId,
+        crossCulturalAnalysisId: crossPayload.analysisId,
+        assets: {
+          previewImage: true,
+          threeView: true,
+          showcaseVideo: false,
+        },
+      },
+    });
+    expect(initialResponse.statusCode).toBe(200);
+    const initialPayload = initialResponse.json();
+    expect(initialPayload.assets.previewImage.status).toBe("READY");
+    expect(initialPayload.assets.threeView.front.status).toBe("FAILED");
+    expect(initialPayload.assets.threeView.side.status).toBe("READY");
+    expect(initialPayload.assets.threeView.back.status).toBe("READY");
+
+    const previewCallsBefore = provider.calls.filter((item) => item.prompt.includes("hero shot")).length;
+    const frontCallsBefore = provider.calls.filter((item) => item.prompt.includes("front view technical render")).length;
+    const sideCallsBefore = provider.calls.filter((item) => item.prompt.includes("side view technical render")).length;
+    const backCallsBefore = provider.calls.filter((item) => item.prompt.includes("back view technical render")).length;
+
+    const retryResponse = await retryApp.inject({
+      method: "POST",
+      url: `/api/v1/redesign/suggest/${initialPayload.suggestionId}/retry`,
+      payload: {
+        asset: "threeView.front",
+      },
+    });
+
+    await retryApp.close();
+
+    expect(retryResponse.statusCode).toBe(200);
+    const retryPayload = retryResponse.json();
+    expect(retryPayload.suggestionId).toBe(initialPayload.suggestionId);
+    expect(retryPayload.assets.previewImage.imageBase64).toBe(initialPayload.assets.previewImage.imageBase64);
+    expect(retryPayload.assets.threeView.side.imageBase64).toBe(initialPayload.assets.threeView.side.imageBase64);
+    expect(retryPayload.assets.threeView.back.imageBase64).toBe(initialPayload.assets.threeView.back.imageBase64);
+    expect(retryPayload.assets.threeView.front.status).toBe("READY");
+    expect(retryPayload.assets.threeView.front.imageBase64).toBeTypeOf("string");
+
+    const previewCallsAfter = provider.calls.filter((item) => item.prompt.includes("hero shot")).length;
+    const frontCallsAfter = provider.calls.filter((item) => item.prompt.includes("front view technical render")).length;
+    const sideCallsAfter = provider.calls.filter((item) => item.prompt.includes("side view technical render")).length;
+    const backCallsAfter = provider.calls.filter((item) => item.prompt.includes("back view technical render")).length;
+
+    expect(previewCallsAfter).toBe(previewCallsBefore);
+    expect(sideCallsAfter).toBe(sideCallsBefore);
+    expect(backCallsAfter).toBe(backCallsBefore);
+    expect(frontCallsAfter).toBe(frontCallsBefore + 1);
   });
 });

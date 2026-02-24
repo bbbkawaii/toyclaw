@@ -5,6 +5,7 @@ import type {
   CrossCulturalAnalysisResponse,
   DirectionPreset,
   RedesignSuggestionResponse,
+  RetryableRedesignAssetKey,
   TargetMarket,
 } from "../types/api";
 
@@ -27,6 +28,11 @@ export interface RedesignSuggestPayload {
     threeView?: boolean;
     showcaseVideo?: boolean;
   };
+}
+
+export interface RedesignRetryAssetPayload {
+  suggestionId: string;
+  asset: RetryableRedesignAssetKey;
 }
 
 export async function postImageAnalyze(payload: ImageAnalyzePayload): Promise<AnalyzeResponse> {
@@ -90,6 +96,20 @@ export async function postRedesignSuggest(payload: RedesignSuggestPayload): Prom
 export async function getRedesignSuggest(suggestionId: string): Promise<RedesignSuggestionResponse> {
   try {
     const response = await apiClient.get<RedesignSuggestionResponse>(`/redesign/suggest/${suggestionId}`);
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export async function postRedesignRetryAsset(payload: RedesignRetryAssetPayload): Promise<RedesignSuggestionResponse> {
+  try {
+    const response = await apiClient.post<RedesignSuggestionResponse>(
+      `/redesign/suggest/${payload.suggestionId}/retry`,
+      {
+        asset: payload.asset,
+      },
+    );
     return response.data;
   } catch (error) {
     throw toApiError(error);

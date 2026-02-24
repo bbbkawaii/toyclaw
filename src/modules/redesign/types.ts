@@ -72,6 +72,8 @@ export interface RedesignAssetFlags {
   showcaseVideo: boolean;
 }
 
+export type RetryableRedesignAsset = "previewImage" | "threeView.front" | "threeView.side" | "threeView.back";
+
 export interface RedesignSuggestionResponse {
   suggestionId: string;
   requestId: string;

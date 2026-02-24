@@ -128,6 +128,12 @@ export interface ImageAssetResult {
   reason?: string;
 }
 
+export type RetryableRedesignAssetKey =
+  | "previewImage"
+  | "threeView.front"
+  | "threeView.side"
+  | "threeView.back";
+
 export interface ShowcaseVideoKeyframe {
   label: string;
   prompt: string;

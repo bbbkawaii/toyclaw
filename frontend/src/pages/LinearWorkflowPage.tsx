@@ -4,7 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { ApiError, type ApiError as ApiErrorType, toApiError } from "../shared/api/errors";
-import { postCrossCulturalAnalyze, postImageAnalyze, postRedesignSuggest } from "../shared/api/toyclaw";
+import {
+  postCrossCulturalAnalyze,
+  postImageAnalyze,
+  postRedesignRetryAsset,
+  postRedesignSuggest,
+} from "../shared/api/toyclaw";
 import {
   toZhAssetReason,
   toZhColorName,
@@ -22,7 +27,14 @@ import {
   toZhText,
 } from "../shared/i18n/content";
 import { toImageAssetStatusLabel, toLevelLabel, toShowcaseVideoStatusLabel } from "../shared/i18n/labels";
-import { DIRECTION_PRESETS, TARGET_MARKETS, type DirectionPreset, type ImageAssetResult, type TargetMarket } from "../shared/types/api";
+import {
+  DIRECTION_PRESETS,
+  TARGET_MARKETS,
+  type DirectionPreset,
+  type ImageAssetResult,
+  type RetryableRedesignAssetKey,
+  type TargetMarket,
+} from "../shared/types/api";
 import { InlineError } from "../shared/ui/InlineError";
 import { LoadingPulse } from "../shared/ui/LoadingPulse";
 import { SurfacePanel } from "../shared/ui/SurfacePanel";
@@ -118,6 +130,7 @@ export function LinearWorkflowPage(): JSX.Element {
   const [isSubmittingImage, setSubmittingImage] = useState(false);
   const [isSubmittingCross, setSubmittingCross] = useState(false);
   const [isGeneratingRedesign, setGeneratingRedesign] = useState(false);
+  const [retryingAssetKey, setRetryingAssetKey] = useState<RetryableRedesignAssetKey | null>(null);
 
   const [imageError, setImageError] = useState<ApiErrorType | null>(null);
   const [crossError, setCrossError] = useState<ApiErrorType | null>(null);
@@ -207,6 +220,41 @@ export function LinearWorkflowPage(): JSX.Element {
       setGeneratingRedesign(false);
     }
   }, [analysisId, requestId, setRedesignResult]);
+
+  const retryFailedAsset = useCallback(
+    async (asset: RetryableRedesignAssetKey): Promise<void> => {
+      if (isGeneratingRedesign || retryingAssetKey) {
+        return;
+      }
+
+      const suggestionId = redesignResult?.suggestionId;
+      if (!suggestionId) {
+        setRedesignError(
+          new ApiError({
+            message: "缺少改款结果编号",
+            code: "MISSING_SUGGESTION_ID",
+          }),
+        );
+        return;
+      }
+
+      setRetryingAssetKey(asset);
+      setRedesignError(null);
+
+      try {
+        const response = await postRedesignRetryAsset({
+          suggestionId,
+          asset,
+        });
+        setRedesignResult(response);
+      } catch (rawError) {
+        setRedesignError(toApiError(rawError));
+      } finally {
+        setRetryingAssetKey(null);
+      }
+    },
+    [isGeneratingRedesign, redesignResult?.suggestionId, retryingAssetKey, setRedesignResult],
+  );
 
   useEffect(() => {
     if (!requestId || !analysisId) {
@@ -664,18 +712,6 @@ export function LinearWorkflowPage(): JSX.Element {
                 </button>
               </div>
             ) : null}
-            {analysisId && !redesignError && hasFailedRedesignImages ? (
-              <div className={commonStyles.buttonRow}>
-                <button
-                  className={commonStyles.buttonGhost}
-                  type="button"
-                  disabled={isGeneratingRedesign}
-                  onClick={() => void runRedesignGeneration()}
-                >
-                  {isGeneratingRedesign ? "重新生成中..." : "重新生成图片"}
-                </button>
-              </div>
-            ) : null}
           </div>
         </SurfacePanel>
 
@@ -752,36 +788,40 @@ export function LinearWorkflowPage(): JSX.Element {
                   <section className={styles.detailsSection}>
                     <h4>智能资产</h4>
                     {hasFailedRedesignImages ? (
-                      <p className={commonStyles.hint}>部分图片生成失败，可点击“重新生成图片”手动重试。</p>
+                      <p className={commonStyles.hint}>部分图片生成失败，可在失败卡片上单独点击“重新生成”。</p>
                     ) : null}
                     <div className={styles.assetGrid}>
                       <RenderImageAsset
                         title="预览图"
                         asset={redesign.assets.previewImage}
                         onImageClick={setLightboxSrc}
-                        onRetry={() => void runRedesignGeneration()}
-                        isRetrying={isGeneratingRedesign}
+                        onRetry={() => void retryFailedAsset("previewImage")}
+                        isRetrying={retryingAssetKey === "previewImage"}
+                        disableRetry={isGeneratingRedesign || retryingAssetKey !== null}
                       />
                       <RenderImageAsset
                         title="正视图"
                         asset={redesign.assets.threeView.front}
                         onImageClick={setLightboxSrc}
-                        onRetry={() => void runRedesignGeneration()}
-                        isRetrying={isGeneratingRedesign}
+                        onRetry={() => void retryFailedAsset("threeView.front")}
+                        isRetrying={retryingAssetKey === "threeView.front"}
+                        disableRetry={isGeneratingRedesign || retryingAssetKey !== null}
                       />
                       <RenderImageAsset
                         title="侧视图"
                         asset={redesign.assets.threeView.side}
                         onImageClick={setLightboxSrc}
-                        onRetry={() => void runRedesignGeneration()}
-                        isRetrying={isGeneratingRedesign}
+                        onRetry={() => void retryFailedAsset("threeView.side")}
+                        isRetrying={retryingAssetKey === "threeView.side"}
+                        disableRetry={isGeneratingRedesign || retryingAssetKey !== null}
                       />
                       <RenderImageAsset
                         title="背视图"
                         asset={redesign.assets.threeView.back}
                         onImageClick={setLightboxSrc}
-                        onRetry={() => void runRedesignGeneration()}
-                        isRetrying={isGeneratingRedesign}
+                        onRetry={() => void retryFailedAsset("threeView.back")}
+                        isRetrying={retryingAssetKey === "threeView.back"}
+                        disableRetry={isGeneratingRedesign || retryingAssetKey !== null}
                       />
                     </div>
                     <p className={commonStyles.hint}>
@@ -843,12 +883,14 @@ function RenderImageAsset({
   onImageClick,
   onRetry,
   isRetrying = false,
+  disableRetry = false,
 }: {
   title: string;
   asset: ImageAssetResult;
   onImageClick: (src: string) => void;
   onRetry?: () => void;
   isRetrying?: boolean;
+  disableRetry?: boolean;
 }): JSX.Element {
   const imageSrc =
     asset.imageBase64 && asset.status === "READY"
@@ -880,7 +922,7 @@ function RenderImageAsset({
       ) : null}
       {asset.status === "FAILED" && onRetry ? (
         <div className={commonStyles.buttonRow}>
-          <button className={commonStyles.buttonGhost} type="button" disabled={isRetrying} onClick={onRetry}>
+          <button className={commonStyles.buttonGhost} type="button" disabled={isRetrying || disableRetry} onClick={onRetry}>
             {isRetrying ? "重新生成中..." : "重新生成"}
           </button>
         </div>

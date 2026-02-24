@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
-import { redesignSuggestBodySchema, redesignSuggestParamsSchema } from "./schemas";
+import {
+  redesignRetryAssetBodySchema,
+  redesignSuggestBodySchema,
+  redesignSuggestParamsSchema,
+} from "./schemas";
 import type { RedesignService } from "./service";
 
 export interface RedesignRoutesOptions {
@@ -23,5 +27,18 @@ export const redesignRoutes: FastifyPluginAsync<RedesignRoutesOptions> = async (
     const params = redesignSuggestParamsSchema.parse(request.params);
     return options.service.getSuggestion(params.suggestionId);
   });
-};
 
+  app.post<{
+    Params: {
+      suggestionId: string;
+    };
+  }>("/suggest/:suggestionId/retry", async (request) => {
+    const params = redesignSuggestParamsSchema.parse(request.params);
+    const payload = redesignRetryAssetBodySchema.parse(request.body ?? {});
+
+    return options.service.retryAsset({
+      suggestionId: params.suggestionId,
+      asset: payload.asset,
+    });
+  });
+};

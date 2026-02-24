@@ -26,6 +26,7 @@ import type {
   PackagingStyleSuggestion,
   RedesignAssetFlags,
   RedesignAssets,
+  RetryableRedesignAsset,
   RedesignSuggestionResponse,
   ShapeDetailAdjustment,
   ShowcaseVideoAssetResult,
@@ -38,6 +39,11 @@ export interface CreateRedesignSuggestionInput {
   requestId: string;
   crossCulturalAnalysisId: string;
   assets?: Partial<RedesignAssetFlags>;
+}
+
+export interface RetryRedesignAssetInput {
+  suggestionId: string;
+  asset: RetryableRedesignAsset;
 }
 
 interface RedesignServiceDeps {
@@ -334,6 +340,123 @@ export class RedesignService {
     };
   }
 
+  async retryAsset(input: RetryRedesignAssetInput): Promise<RedesignSuggestionResponse> {
+    const existing = await this.deps.prisma.redesignSuggestion.findUnique({
+      where: { id: input.suggestionId },
+    });
+
+    if (!existing) {
+      throw new AppError("Redesign suggestion not found", "REDESIGN_NOT_FOUND", 404);
+    }
+
+    const payload = redesignResultPayloadSchema.parse({
+      targetMarket: existing.targetMarket,
+      colorSchemes: existing.colorSchemes,
+      shapeAdjustments: existing.shapeAdjustments,
+      packagingSuggestions: existing.packagingSuggestions,
+      assets: existing.assets,
+    });
+
+    const targetAsset = this.getRetryTargetAsset(payload.assets, input.asset);
+    if (targetAsset.status !== "FAILED") {
+      throw new AppError("Selected asset is not failed", "REDESIGN_ASSET_NOT_FAILED", 409, {
+        asset: input.asset,
+        status: targetAsset.status,
+      });
+    }
+
+    const [analysisRequest, crossCultural] = await Promise.all([
+      this.deps.prisma.analysisRequest.findUnique({
+        where: { id: existing.requestId },
+        include: { result: true },
+      }),
+      this.deps.prisma.crossCulturalAnalysis.findUnique({
+        where: { id: existing.crossCulturalAnalysisId },
+      }),
+    ]);
+
+    if (!analysisRequest) {
+      throw new AppError("Image analysis request not found", "ANALYSIS_REQUEST_NOT_FOUND", 404);
+    }
+    if (analysisRequest.status !== "SUCCEEDED" || !analysisRequest.result) {
+      throw new AppError("Image analysis is not ready", "ANALYSIS_NOT_READY", 409, {
+        status: analysisRequest.status,
+      });
+    }
+    if (!crossCultural) {
+      throw new AppError("Cross-cultural analysis not found", "CROSS_CULTURAL_NOT_FOUND", 404);
+    }
+    if (crossCultural.requestId !== analysisRequest.id) {
+      throw new AppError(
+        "crossCulturalAnalysisId does not belong to requestId",
+        "CROSS_CULTURAL_MISMATCH",
+        400,
+      );
+    }
+
+    const features = extractedFeaturesSchema.parse({
+      shape: analysisRequest.result.shape,
+      colors: analysisRequest.result.colors,
+      material: analysisRequest.result.material,
+      style: analysisRequest.result.style,
+    });
+    const festivalThemes = festivalThemeMatchSchema.array().parse(crossCultural.festivalThemes) as FestivalThemeMatch[];
+    const promptContext: AssetPromptContext = {
+      targetMarket: payload.targetMarket as TargetMarket,
+      directionValue: analysisRequest.directionValue,
+      shapeCategory: features.shape.category,
+      materialNames: features.material.map((item) => item.name),
+      styleNames: features.style.map((item) => item.name),
+      colorSchemes: payload.colorSchemes,
+      shapeAdjustments: payload.shapeAdjustments,
+      packagingSuggestions: payload.packagingSuggestions,
+      festivalTheme: festivalThemes[0],
+    };
+
+    const referenceImage = await this.loadReferenceImage(analysisRequest.imagePath, analysisRequest.mimeType);
+    const updatedAssets = await this.retrySelectedAsset({
+      target: input.asset,
+      assets: payload.assets,
+      context: promptContext,
+      originalReference: referenceImage,
+    });
+
+    const updatedPayload = redesignResultPayloadSchema.parse({
+      targetMarket: payload.targetMarket,
+      colorSchemes: payload.colorSchemes,
+      shapeAdjustments: payload.shapeAdjustments,
+      packagingSuggestions: payload.packagingSuggestions,
+      assets: updatedAssets,
+    });
+
+    const updated = await this.deps.prisma.redesignSuggestion.update({
+      where: { id: existing.id },
+      data: {
+        assets: updatedPayload.assets as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      suggestionId: updated.id,
+      requestId: updated.requestId,
+      crossCulturalAnalysisId: updated.crossCulturalAnalysisId,
+      targetMarket: updatedPayload.targetMarket as TargetMarket,
+      colorSchemes: updatedPayload.colorSchemes,
+      shapeAdjustments: updatedPayload.shapeAdjustments,
+      packagingSuggestions: updatedPayload.packagingSuggestions,
+      assets: updatedPayload.assets,
+      ...(updated.assetProvider && updated.assetModelName
+        ? {
+            model: {
+              provider: updated.assetProvider,
+              modelName: updated.assetModelName,
+            },
+          }
+        : {}),
+      createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
   private buildColorSchemes(
     targetMarket: TargetMarket,
     features: ExtractedFeatures,
@@ -532,6 +655,76 @@ export class RedesignService {
         };
       } catch {
         return undefined;
+      }
+    }
+  }
+
+  private getRetryTargetAsset(assets: RedesignAssets, target: RetryableRedesignAsset): ImageAssetResult {
+    switch (target) {
+      case "previewImage":
+        return assets.previewImage;
+      case "threeView.front":
+        return assets.threeView.front;
+      case "threeView.side":
+        return assets.threeView.side;
+      case "threeView.back":
+        return assets.threeView.back;
+      default: {
+        const exhaustiveCheck: never = target;
+        throw new AppError(`Unsupported retry target: ${exhaustiveCheck}`, "REDESIGN_ASSET_NOT_SUPPORTED", 400);
+      }
+    }
+  }
+
+  private async retrySelectedAsset(input: {
+    target: RetryableRedesignAsset;
+    assets: RedesignAssets;
+    context: AssetPromptContext;
+    originalReference: ReferenceImage | undefined;
+  }): Promise<RedesignAssets> {
+    const nextAssets: RedesignAssets = {
+      previewImage: { ...input.assets.previewImage },
+      threeView: {
+        front: { ...input.assets.threeView.front },
+        side: { ...input.assets.threeView.side },
+        back: { ...input.assets.threeView.back },
+      },
+      showcaseVideo: input.assets.showcaseVideo,
+    };
+
+    const previewReady = nextAssets.previewImage.status === "READY" && !!nextAssets.previewImage.imageBase64;
+    const threeViewReference: ReferenceImage | undefined = previewReady
+      ? {
+          imageBase64: nextAssets.previewImage.imageBase64!,
+          mimeType: nextAssets.previewImage.mimeType ?? "image/png",
+        }
+      : input.originalReference;
+    const referenceIsRedesign = previewReady;
+
+    switch (input.target) {
+      case "previewImage": {
+        const previewPrompt = buildPreviewAssetPrompt(input.context);
+        nextAssets.previewImage = await this.generateImageAsset(previewPrompt, input.originalReference);
+        return nextAssets;
+      }
+      case "threeView.front": {
+        const prompt = buildThreeViewAssetPrompt(input.context, "front", referenceIsRedesign);
+        nextAssets.threeView.front = await this.generateImageAsset(prompt, threeViewReference);
+        return nextAssets;
+      }
+      case "threeView.side": {
+        const prompt = buildThreeViewAssetPrompt(input.context, "side", referenceIsRedesign);
+        nextAssets.threeView.side = await this.generateImageAsset(prompt, threeViewReference);
+        return nextAssets;
+      }
+      case "threeView.back": {
+        const prompt = buildThreeViewAssetPrompt(input.context, "back", referenceIsRedesign);
+        nextAssets.threeView.back = await this.generateImageAsset(prompt, threeViewReference);
+        return nextAssets;
+      }
+      default: {
+        const exhaustiveCheck: never = input.target;
+        throw new AppError(`Unsupported retry target: ${exhaustiveCheck}`, "REDESIGN_ASSET_NOT_SUPPORTED", 400);
       }
     }
   }
