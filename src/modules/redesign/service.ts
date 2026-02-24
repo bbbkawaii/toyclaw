@@ -358,8 +358,8 @@ export class RedesignService {
     });
 
     const targetAsset = this.getRetryTargetAsset(payload.assets, input.asset);
-    if (targetAsset.status !== "FAILED") {
-      throw new AppError("Selected asset is not failed", "REDESIGN_ASSET_NOT_FAILED", 409, {
+    if (targetAsset.status === "READY") {
+      throw new AppError("Selected asset is already ready", "REDESIGN_ASSET_NOT_RETRYABLE", 409, {
         asset: input.asset,
         status: targetAsset.status,
       });

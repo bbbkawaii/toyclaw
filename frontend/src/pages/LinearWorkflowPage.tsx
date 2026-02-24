@@ -204,16 +204,32 @@ export function LinearWorkflowPage(): JSX.Element {
     setRedesignError(null);
 
     try {
-      const response = await postRedesignSuggest({
+      const previewFirst = await postRedesignSuggest({
         requestId,
         crossCulturalAnalysisId: analysisId,
         assets: {
           previewImage: true,
-          threeView: true,
+          threeView: false,
           showcaseVideo: true,
         },
       });
-      setRedesignResult(response);
+      // Show preview immediately, then progressively complete three-view assets.
+      setRedesignResult(previewFirst);
+
+      let latest = previewFirst;
+      const pendingThreeViews: RetryableRedesignAssetKey[] = [
+        "threeView.front",
+        "threeView.side",
+        "threeView.back",
+      ];
+
+      for (const assetKey of pendingThreeViews) {
+        latest = await postRedesignRetryAsset({
+          suggestionId: latest.suggestionId,
+          asset: assetKey,
+        });
+        setRedesignResult(latest);
+      }
     } catch (rawError) {
       setRedesignError(toApiError(rawError));
     } finally {

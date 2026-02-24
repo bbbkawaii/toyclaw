@@ -453,6 +453,90 @@ describe("redesign routes", () => {
     expect(redesignPayload.assets.showcaseVideo.status).toBe("SKIPPED");
   });
 
+  it("allows retry endpoint to generate a previously skipped three-view asset", async () => {
+    const retryApp = await createApp({
+      prisma,
+      visionProvider: new MockVisionProvider(),
+      imageGenerationProvider: new MockImageGenerationProvider(),
+      config: {
+        databaseUrl: dbUrl,
+        uploadDir: join(tmpRoot, "retry-skipped-uploads"),
+        openaiModel: "mock-vision-v1",
+        maxFileSizeMb: 10,
+        providerTimeoutMs: 1000,
+        port: 0,
+      },
+    });
+    await retryApp.ready();
+
+    const multipart = buildMultipart({
+      fields: { directionPreset: "CHANGE_COLOR" },
+      file: {
+        fieldName: "image",
+        filename: "toy.png",
+        contentType: "image/png",
+        data: VALID_PNG_BUFFER,
+      },
+    });
+
+    const imageResponse = await retryApp.inject({
+      method: "POST",
+      url: "/api/v1/image-input/analyze",
+      payload: multipart.body,
+      headers: { "content-type": multipart.contentType },
+    });
+    expect(imageResponse.statusCode).toBe(200);
+    const imagePayload = imageResponse.json();
+
+    const crossResponse = await retryApp.inject({
+      method: "POST",
+      url: "/api/v1/cross-cultural/analyze",
+      payload: {
+        requestId: imagePayload.requestId,
+        targetMarket: "US",
+      },
+    });
+    expect(crossResponse.statusCode).toBe(200);
+    const crossPayload = crossResponse.json();
+
+    const skippedResponse = await retryApp.inject({
+      method: "POST",
+      url: "/api/v1/redesign/suggest",
+      payload: {
+        requestId: imagePayload.requestId,
+        crossCulturalAnalysisId: crossPayload.analysisId,
+        assets: {
+          previewImage: true,
+          threeView: false,
+          showcaseVideo: false,
+        },
+      },
+    });
+    expect(skippedResponse.statusCode).toBe(200);
+    const skippedPayload = skippedResponse.json();
+    expect(skippedPayload.assets.previewImage.status).toBe("READY");
+    expect(skippedPayload.assets.threeView.front.status).toBe("SKIPPED");
+    expect(skippedPayload.assets.threeView.side.status).toBe("SKIPPED");
+    expect(skippedPayload.assets.threeView.back.status).toBe("SKIPPED");
+
+    const retryFrontResponse = await retryApp.inject({
+      method: "POST",
+      url: `/api/v1/redesign/suggest/${skippedPayload.suggestionId}/retry`,
+      payload: {
+        asset: "threeView.front",
+      },
+    });
+
+    await retryApp.close();
+
+    expect(retryFrontResponse.statusCode).toBe(200);
+    const retryFrontPayload = retryFrontResponse.json();
+    expect(retryFrontPayload.assets.previewImage.status).toBe("READY");
+    expect(retryFrontPayload.assets.threeView.front.status).toBe("READY");
+    expect(retryFrontPayload.assets.threeView.side.status).toBe("SKIPPED");
+    expect(retryFrontPayload.assets.threeView.back.status).toBe("SKIPPED");
+  });
+
   it("chains preview output as reference for three-view generation", async () => {
     const recorder = new RecordingImageProvider();
     const chainApp = await createApp({
