@@ -70,6 +70,51 @@ class MockImageGenerationProvider implements ImageGenerationProvider {
   }
 }
 
+class RecordingImageProvider implements ImageGenerationProvider {
+  readonly providerName = "recording";
+  readonly modelName = "recording-v1";
+  readonly calls: Array<{ prompt: string; referenceImageBase64?: string }> = [];
+
+  async generatePreview(input: ImageGenerationInput): Promise<ImageGenerationResult> {
+    this.calls.push({
+      prompt: input.prompt,
+      referenceImageBase64: input.referenceImageBase64,
+    });
+    const digest = Buffer.from(`img-${this.calls.length}`, "utf8").toString("base64");
+    return {
+      imageBase64: digest,
+      mimeType: "image/png",
+      rawResponse: { mocked: true },
+    };
+  }
+}
+
+class PreviewFailingImageProvider implements ImageGenerationProvider {
+  readonly providerName = "preview-failing";
+  readonly modelName = "preview-failing-v1";
+  readonly calls: Array<{ prompt: string; referenceImageBase64?: string }> = [];
+  private callIndex = 0;
+
+  async generatePreview(input: ImageGenerationInput): Promise<ImageGenerationResult> {
+    this.calls.push({
+      prompt: input.prompt,
+      referenceImageBase64: input.referenceImageBase64,
+    });
+    this.callIndex++;
+    // First two calls are for preview (with-reference attempt, then text-only fallback) — both fail
+    if (this.callIndex <= 2) {
+      return { rawResponse: { mocked: true } };
+    }
+    const digest = Buffer.from(`img-${this.callIndex}`, "utf8").toString("base64");
+    return {
+      imageBase64: digest,
+      mimeType: "image/png",
+      rawResponse: { mocked: true },
+    };
+  }
+}
+
+
 class ReferenceSensitiveImageProvider implements ImageGenerationProvider {
   readonly providerName = "reference-sensitive";
   readonly modelName = "reference-sensitive-v1";
@@ -379,5 +424,172 @@ describe("redesign routes", () => {
     expect(redesignPayload.assets.previewImage.status).toBe("READY");
     expect(redesignPayload.assets.threeView.front.status).toBe("SKIPPED");
     expect(redesignPayload.assets.showcaseVideo.status).toBe("SKIPPED");
+  });
+
+  it("chains preview output as reference for three-view generation", async () => {
+    const recorder = new RecordingImageProvider();
+    const chainApp = await createApp({
+      prisma,
+      visionProvider: new MockVisionProvider(),
+      imageGenerationProvider: recorder,
+      config: {
+        databaseUrl: dbUrl,
+        uploadDir: join(tmpRoot, "chain-uploads"),
+        openaiModel: "mock-vision-v1",
+        maxFileSizeMb: 10,
+        providerTimeoutMs: 1000,
+        port: 0,
+      },
+    });
+    await chainApp.ready();
+
+    const multipart = buildMultipart({
+      fields: { directionPreset: "CHANGE_COLOR" },
+      file: {
+        fieldName: "image",
+        filename: "toy.png",
+        contentType: "image/png",
+        data: VALID_PNG_BUFFER,
+      },
+    });
+
+    const imageResponse = await chainApp.inject({
+      method: "POST",
+      url: "/api/v1/image-input/analyze",
+      payload: multipart.body,
+      headers: { "content-type": multipart.contentType },
+    });
+    expect(imageResponse.statusCode).toBe(200);
+    const imagePayload = imageResponse.json();
+
+    const crossResponse = await chainApp.inject({
+      method: "POST",
+      url: "/api/v1/cross-cultural/analyze",
+      payload: {
+        requestId: imagePayload.requestId,
+        targetMarket: "US",
+      },
+    });
+    expect(crossResponse.statusCode).toBe(200);
+    const crossPayload = crossResponse.json();
+
+    const redesignResponse = await chainApp.inject({
+      method: "POST",
+      url: "/api/v1/redesign/suggest",
+      payload: {
+        requestId: imagePayload.requestId,
+        crossCulturalAnalysisId: crossPayload.analysisId,
+        assets: {
+          previewImage: true,
+          threeView: true,
+          showcaseVideo: false,
+        },
+      },
+    });
+
+    await chainApp.close();
+
+    expect(redesignResponse.statusCode).toBe(200);
+    const redesignPayload = redesignResponse.json();
+    expect(redesignPayload.assets.previewImage.status).toBe("READY");
+    expect(redesignPayload.assets.threeView.front.status).toBe("READY");
+
+    // Preview call uses the original uploaded image as reference
+    const previewCall = recorder.calls[0];
+    expect(previewCall.prompt).toContain("hero shot");
+
+    // Three-view calls should use the preview output (not the original upload) as reference
+    const previewOutputBase64 = previewCall.referenceImageBase64;
+    const threeViewCalls = recorder.calls.slice(1);
+    expect(threeViewCalls).toHaveLength(3);
+    for (const call of threeViewCalls) {
+      expect(call.referenceImageBase64).not.toBe(previewOutputBase64);
+      // The reference should be the preview output base64, not the original image
+      expect(call.referenceImageBase64).toBeDefined();
+    }
+
+    // Prompts should contain the consistency requirement (referenceIsRedesign=true)
+    for (const call of threeViewCalls) {
+      expect(call.prompt).toContain("finalized redesign");
+      expect(call.prompt).not.toContain("original toy before redesign");
+    }
+  });
+
+  it("uses fallback prompt when preview fails and three-view gets original reference", async () => {
+    const recorder = new PreviewFailingImageProvider();
+    const failApp = await createApp({
+      prisma,
+      visionProvider: new MockVisionProvider(),
+      imageGenerationProvider: recorder,
+      config: {
+        databaseUrl: dbUrl,
+        uploadDir: join(tmpRoot, "fail-uploads"),
+        openaiModel: "mock-vision-v1",
+        maxFileSizeMb: 10,
+        providerTimeoutMs: 1000,
+        port: 0,
+      },
+    });
+    await failApp.ready();
+
+    const multipart = buildMultipart({
+      fields: { directionPreset: "ADD_ACCESSORY" },
+      file: {
+        fieldName: "image",
+        filename: "toy.png",
+        contentType: "image/png",
+        data: VALID_PNG_BUFFER,
+      },
+    });
+
+    const imageResponse = await failApp.inject({
+      method: "POST",
+      url: "/api/v1/image-input/analyze",
+      payload: multipart.body,
+      headers: { "content-type": multipart.contentType },
+    });
+    expect(imageResponse.statusCode).toBe(200);
+    const imagePayload = imageResponse.json();
+
+    const crossResponse = await failApp.inject({
+      method: "POST",
+      url: "/api/v1/cross-cultural/analyze",
+      payload: {
+        requestId: imagePayload.requestId,
+        targetMarket: "EUROPE",
+      },
+    });
+    expect(crossResponse.statusCode).toBe(200);
+    const crossPayload = crossResponse.json();
+
+    const redesignResponse = await failApp.inject({
+      method: "POST",
+      url: "/api/v1/redesign/suggest",
+      payload: {
+        requestId: imagePayload.requestId,
+        crossCulturalAnalysisId: crossPayload.analysisId,
+        assets: {
+          previewImage: true,
+          threeView: true,
+          showcaseVideo: false,
+        },
+      },
+    });
+
+    await failApp.close();
+
+    expect(redesignResponse.statusCode).toBe(200);
+    const redesignPayload = redesignResponse.json();
+    expect(redesignPayload.assets.previewImage.status).toBe("FAILED");
+    expect(redesignPayload.assets.threeView.front.status).toBe("READY");
+
+    // When preview failed, three-view prompts should use the fallback wording
+    // (referenceIsRedesign=false → "original toy before redesign")
+    const threeViewCalls = recorder.calls.filter((c) => c.prompt.includes("view technical render"));
+    expect(threeViewCalls.length).toBeGreaterThanOrEqual(3);
+    for (const call of threeViewCalls) {
+      expect(call.prompt).toContain("original toy before redesign");
+      expect(call.prompt).not.toContain("finalized redesign");
+    }
   });
 });

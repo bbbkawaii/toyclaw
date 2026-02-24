@@ -553,8 +553,10 @@ export class RedesignService {
         ? { imageBase64: previewImage.imageBase64, mimeType: previewImage.mimeType ?? "image/png" }
         : referenceImage;
 
+    const referenceIsRedesign = previewImage.status === "READY" && !!previewImage.imageBase64;
+
     const [threeView, showcaseVideo] = await Promise.all([
-      this.generateThreeViewAssets(context, flags.threeView, threeViewReference),
+      this.generateThreeViewAssets(context, flags.threeView, threeViewReference, referenceIsRedesign),
       this.generateShowcaseVideoAssets(context, flags.showcaseVideo),
     ]);
 
@@ -569,10 +571,11 @@ export class RedesignService {
     context: AssetPromptContext,
     enabled: boolean,
     referenceImage: ReferenceImage | undefined,
+    referenceIsRedesign: boolean,
   ): Promise<ThreeViewAssetResult> {
-    const frontPrompt = buildThreeViewAssetPrompt(context, "front");
-    const sidePrompt = buildThreeViewAssetPrompt(context, "side");
-    const backPrompt = buildThreeViewAssetPrompt(context, "back");
+    const frontPrompt = buildThreeViewAssetPrompt(context, "front", referenceIsRedesign);
+    const sidePrompt = buildThreeViewAssetPrompt(context, "side", referenceIsRedesign);
+    const backPrompt = buildThreeViewAssetPrompt(context, "back", referenceIsRedesign);
 
     if (!enabled) {
       return {

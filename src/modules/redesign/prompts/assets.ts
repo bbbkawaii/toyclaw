@@ -42,13 +42,26 @@ Render requirement:
 `.trim();
 }
 
-export function buildThreeViewAssetPrompt(context: AssetPromptContext, view: "front" | "side" | "back"): string {
+export function buildThreeViewAssetPrompt(
+  context: AssetPromptContext,
+  view: "front" | "side" | "back",
+  referenceIsRedesign = false,
+): string {
   const scheme = context.colorSchemes[0];
   const adjustments = context.shapeAdjustments
     .slice(0, 3)
     .flatMap((item) => item.actions)
     .slice(0, 4)
     .join(", ");
+
+  const referenceBlock = referenceIsRedesign
+    ? `
+Consistency requirement:
+- The reference image shows the finalized redesign. Match its exact colors, proportions, surface details, and accessories.
+- Do NOT invent new features or alter the design. Only change the camera angle to show the ${view} view.`
+    : `
+Design requirement:
+- The reference image shows the original toy before redesign. Apply all color, shape, and style changes described above to produce the redesigned ${view} view.`;
 
   return `
 Create a ${view} view technical render of the redesigned toy.
@@ -62,10 +75,7 @@ Output style:
 - neutral background
 - clean product-centric framing
 - suitable for product spec sheet
-
-Consistency requirement:
-- The reference image shows the finalized redesign. Match its exact colors, proportions, surface details, and accessories.
-- Do NOT invent new features or alter the design. Only change the camera angle to show the ${view} view.
+${referenceBlock}
 `.trim();
 }
 
