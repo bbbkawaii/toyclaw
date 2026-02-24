@@ -45,6 +45,9 @@ const errorCodeLabels: Record<string, string> = {
   PROVIDER_TIMEOUT: "模型服务超时",
   MODEL_OUTPUT_INVALID: "模型返回内容异常",
   FALLBACK_EXTRACTION_FAILED: "本地兜底提取失败",
+  COMPLIANCE_NOT_FOUND: "合规评估不存在",
+  COMPLIANCE_INDEX_MISSING: "合规知识库未就绪",
+  EMBEDDING_DIMENSION_MISMATCH: "向量维度不匹配",
 };
 
 export function toLevelLabel(level: Level): string {

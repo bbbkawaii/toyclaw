@@ -136,6 +136,10 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     status: "ok",
   }));
 
+  app.get("/api/v1/capabilities", async () => ({
+    compliance: canRegisterCompliance,
+  }));
+
   return app;
 }
 

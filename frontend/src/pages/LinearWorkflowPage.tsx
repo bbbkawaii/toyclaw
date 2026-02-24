@@ -5,7 +5,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { ApiError, type ApiError as ApiErrorType, toApiError } from "../shared/api/errors";
 import {
+  getCapabilities,
   postCrossCulturalAnalyze,
+  postComplianceAssess,
   postImageAnalyze,
   postRedesignRetryAsset,
   postRedesignSuggest,
@@ -46,6 +48,7 @@ const STEP_SECTION_ID = {
   "image-input": "step-image-input",
   "cross-cultural": "step-cross-cultural",
   redesign: "step-redesign",
+  compliance: "step-compliance",
 } as const;
 
 const directionPresetLabels: Record<DirectionPreset, string> = {
@@ -121,25 +124,31 @@ export function LinearWorkflowPage(): JSX.Element {
     imageResult,
     crossCulturalResult,
     redesignResult,
+    complianceResult,
     setStep,
     setImageResult,
     setCrossCulturalResult,
     setRedesignResult,
+    setComplianceResult,
   } = useWorkflowStore();
 
   const [isSubmittingImage, setSubmittingImage] = useState(false);
   const [isSubmittingCross, setSubmittingCross] = useState(false);
   const [isGeneratingRedesign, setGeneratingRedesign] = useState(false);
+  const [isGeneratingCompliance, setGeneratingCompliance] = useState(false);
   const [retryingAssetKey, setRetryingAssetKey] = useState<RetryableRedesignAssetKey | null>(null);
 
   const [imageError, setImageError] = useState<ApiErrorType | null>(null);
   const [crossError, setCrossError] = useState<ApiErrorType | null>(null);
   const [redesignError, setRedesignError] = useState<ApiErrorType | null>(null);
+  const [complianceError, setComplianceError] = useState<ApiErrorType | null>(null);
 
+  const [complianceEnabled, setComplianceEnabled] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const autoTriggeredAnalysisIdRef = useRef<string | null>(null);
+  const autoTriggeredComplianceIdRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragCounterRef = useRef(0);
 
@@ -165,6 +174,10 @@ export function LinearWorkflowPage(): JSX.Element {
   const { ref: formRef, ...imageRegisterRest } = imageForm.register("image");
 
   useEffect(() => {
+    void getCapabilities().then((caps) => setComplianceEnabled(caps.compliance));
+  }, []);
+
+  useEffect(() => {
     if (!fileList || fileList.length === 0) {
       setPreviewUrl(null);
       return;
@@ -186,6 +199,7 @@ export function LinearWorkflowPage(): JSX.Element {
   useEffect(() => {
     if (!analysisId) {
       autoTriggeredAnalysisIdRef.current = null;
+      autoTriggeredComplianceIdRef.current = null;
     }
   }, [analysisId]);
 
@@ -300,6 +314,74 @@ export function LinearWorkflowPage(): JSX.Element {
     runRedesignGeneration,
   ]);
 
+  const runComplianceGeneration = useCallback(async (): Promise<void> => {
+    if (!requestId || !analysisId || !crossCulturalResult) {
+      return;
+    }
+
+    // Snapshot context to detect stale responses
+    const snapshotRequestId = requestId;
+    const snapshotAnalysisId = analysisId;
+    const snapshotMarket = crossCulturalResult.targetMarket;
+
+    setGeneratingCompliance(true);
+    setComplianceError(null);
+
+    try {
+      const result = await postComplianceAssess({
+        requestId: snapshotRequestId,
+        targetMarket: snapshotMarket,
+      });
+
+      // Discard if context changed while awaiting
+      const current = useWorkflowStore.getState();
+      if (current.requestId !== snapshotRequestId || current.analysisId !== snapshotAnalysisId) {
+        return;
+      }
+
+      setComplianceResult(result);
+    } catch (rawError) {
+      // Only surface error if context is still current
+      const current = useWorkflowStore.getState();
+      if (current.requestId === snapshotRequestId && current.analysisId === snapshotAnalysisId) {
+        setComplianceError(toApiError(rawError));
+      }
+    } finally {
+      setGeneratingCompliance(false);
+    }
+  }, [analysisId, crossCulturalResult, requestId, setComplianceResult]);
+
+  useEffect(() => {
+    if (!complianceEnabled || !requestId || !analysisId || !crossCulturalResult) {
+      return;
+    }
+
+    if (complianceResult?.requestId === requestId && complianceResult?.targetMarket === crossCulturalResult.targetMarket) {
+      autoTriggeredComplianceIdRef.current = analysisId;
+      return;
+    }
+
+    if (isGeneratingCompliance) {
+      return;
+    }
+
+    if (autoTriggeredComplianceIdRef.current === analysisId) {
+      return;
+    }
+
+    autoTriggeredComplianceIdRef.current = analysisId;
+    void runComplianceGeneration();
+  }, [
+    analysisId,
+    complianceEnabled,
+    complianceResult?.requestId,
+    complianceResult?.targetMarket,
+    crossCulturalResult,
+    isGeneratingCompliance,
+    requestId,
+    runComplianceGeneration,
+  ]);
+
   const onSubmitImage = imageForm.handleSubmit(async (values) => {
     const file = values.image.item(0);
     if (!file) {
@@ -326,6 +408,7 @@ export function LinearWorkflowPage(): JSX.Element {
       setStep("cross-cultural");
       setCrossError(null);
       setRedesignError(null);
+      setComplianceError(null);
       window.setTimeout(() => {
         scrollToStep(STEP_SECTION_ID["cross-cultural"]);
       }, 120);
@@ -350,6 +433,7 @@ export function LinearWorkflowPage(): JSX.Element {
     setSubmittingCross(true);
     setCrossError(null);
     setRedesignError(null);
+    setComplianceError(null);
 
     try {
       const result = await postCrossCulturalAnalyze({
@@ -408,6 +492,7 @@ export function LinearWorkflowPage(): JSX.Element {
   const featureSummary = useMemo(() => imageResult?.features, [imageResult]);
   const crossResult = crossCulturalResult;
   const redesign = redesignResult;
+  const compliance = complianceResult;
 
   const tabooHitCount = crossResult?.tabooFindings.filter((item) => item.matched).length ?? 0;
   const topTheme = crossResult?.festivalThemes[0];
@@ -852,6 +937,130 @@ export function LinearWorkflowPage(): JSX.Element {
           )}
         </SurfacePanel>
       </section>
+
+      {complianceEnabled ? (
+      <section id={STEP_SECTION_ID.compliance} className={styles.sectionAnchor}>
+        <SurfacePanel title="第四步：合规认证" rightSlot={<span className="pill">Step 04 · Auto</span>}>
+          <div className={styles.statusWrap}>
+            {!analysisId ? <div className={styles.stepBanner}>等待第二步完成</div> : null}
+            {analysisId && isGeneratingCompliance ? <LoadingPulse label="合规评估中..." /> : null}
+            <InlineError error={complianceError} />
+            {analysisId && complianceError ? (
+              <div className={commonStyles.buttonRow}>
+                <button className={commonStyles.buttonGhost} type="button" onClick={() => void runComplianceGeneration()}>
+                  重试
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </SurfacePanel>
+
+        <SurfacePanel title="第四步结果">
+          {compliance ? (
+            <>
+              <motion.div
+                className={styles.summaryGrid}
+                variants={staggerContainer}
+                initial="hidden"
+                animate="show"
+              >
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
+                  <span className={styles.summaryLabel}>适用标准</span>
+                  <strong>{compliance.report.applicableStandards.length}</strong>
+                  <span className={styles.summaryMeta}>项</span>
+                </motion.article>
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
+                  <span className={styles.summaryLabel}>材料风险</span>
+                  <strong>{compliance.report.materialFindings.length}</strong>
+                  <span className={styles.summaryMeta}>项</span>
+                </motion.article>
+                <motion.article className={styles.summaryCard} variants={staggerItem}>
+                  <span className={styles.summaryLabel}>建议年龄</span>
+                  <strong>{compliance.report.ageGrading.recommendedAge}</strong>
+                  <span className={styles.summaryMeta}>分级</span>
+                </motion.article>
+              </motion.div>
+
+              <details className={styles.details}>
+                <summary className={styles.detailsSummary}>查看明细</summary>
+                <div className={styles.detailsBody}>
+                  <section className={styles.detailsSection}>
+                    <h4>适用标准</h4>
+                    <ul className={styles.compactList}>
+                      {compliance.report.applicableStandards.map((std) => (
+                        <li key={std.standardId}>
+                          {std.mandatory ? "[强制] " : "[推荐] "}
+                          {std.standardId} — {std.standardName}
+                          <span className={styles.inlineMeta}>{std.relevance}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>材料问题</h4>
+                    {compliance.report.materialFindings.length > 0 ? (
+                      <ul className={styles.compactList}>
+                        {compliance.report.materialFindings.map((finding, idx) => (
+                          <li key={`${finding.material}-${idx}`}>
+                            {finding.material} — {finding.concern}
+                            <span className={styles.inlineMeta}>
+                              {finding.requirement} ({finding.sourceStandard})
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className={commonStyles.hint}>未发现材料风险</p>
+                    )}
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>年龄分级</h4>
+                    <p>
+                      <strong>{compliance.report.ageGrading.recommendedAge}</strong> — {compliance.report.ageGrading.reason}
+                    </p>
+                    {compliance.report.ageGrading.requiredWarnings.length > 0 ? (
+                      <ul className={commonStyles.list}>
+                        {compliance.report.ageGrading.requiredWarnings.map((w, idx) => (
+                          <li key={idx}>{w}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>标签要求</h4>
+                    <ul className={styles.compactList}>
+                      {compliance.report.labelRequirements.map((req, idx) => (
+                        <li key={`${req.item}-${idx}`}>
+                          {req.mandatory ? "[强制] " : "[可选] "}
+                          {req.item}
+                          <span className={styles.inlineMeta}>{req.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>认证路径</h4>
+                    <ol className={commonStyles.list}>
+                      {compliance.report.certificationPath.map((step, idx) => (
+                        <li key={idx}>
+                          <strong>{step.step}</strong> — {step.description}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                  <section className={styles.detailsSection}>
+                    <h4>总结</h4>
+                    <p>{compliance.report.summary}</p>
+                  </section>
+                </div>
+              </details>
+            </>
+          ) : (
+            <p className="muted">等待合规评估结果</p>
+          )}
+        </SurfacePanel>
+      </section>
+      ) : null}
 
       <AnimatePresence>
         {lightboxSrc ? (

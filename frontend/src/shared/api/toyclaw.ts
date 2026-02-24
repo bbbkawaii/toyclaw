@@ -2,6 +2,7 @@ import { apiClient } from "./client";
 import { toApiError } from "./errors";
 import type {
   AnalyzeResponse,
+  ComplianceAssessmentResponse,
   CrossCulturalAnalysisResponse,
   DirectionPreset,
   RedesignSuggestionResponse,
@@ -33,6 +34,15 @@ export interface RedesignSuggestPayload {
 export interface RedesignRetryAssetPayload {
   suggestionId: string;
   asset: RetryableRedesignAssetKey;
+}
+
+export interface ComplianceAssessPayload {
+  requestId: string;
+  targetMarket: TargetMarket;
+}
+
+export interface CapabilitiesResponse {
+  compliance: boolean;
 }
 
 export async function postImageAnalyze(payload: ImageAnalyzePayload): Promise<AnalyzeResponse> {
@@ -113,5 +123,34 @@ export async function postRedesignRetryAsset(payload: RedesignRetryAssetPayload)
     return response.data;
   } catch (error) {
     throw toApiError(error);
+  }
+}
+
+export async function postComplianceAssess(
+  payload: ComplianceAssessPayload,
+): Promise<ComplianceAssessmentResponse> {
+  try {
+    const response = await apiClient.post<ComplianceAssessmentResponse>("/compliance/assess", payload);
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export async function getComplianceAssess(assessmentId: string): Promise<ComplianceAssessmentResponse> {
+  try {
+    const response = await apiClient.get<ComplianceAssessmentResponse>(`/compliance/assess/${assessmentId}`);
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export async function getCapabilities(): Promise<CapabilitiesResponse> {
+  try {
+    const response = await apiClient.get<CapabilitiesResponse>("/capabilities");
+    return response.data;
+  } catch {
+    return { compliance: false };
   }
 }

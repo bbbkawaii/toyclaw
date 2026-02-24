@@ -9,6 +9,7 @@ const STEP_SECTION_ID_MAP: Record<WorkflowStep, string> = {
   "image-input": "step-image-input",
   "cross-cultural": "step-cross-cultural",
   redesign: "step-redesign",
+  compliance: "step-compliance",
 };
 
 export function WorkspaceLayout(): JSX.Element {
@@ -36,6 +37,13 @@ export function WorkspaceLayout(): JSX.Element {
       description: "改款输出",
       enabled: Boolean(state.requestId && state.analysisId),
       done: Boolean(state.redesignResult),
+    },
+    {
+      key: "compliance" as const,
+      label: "合规认证",
+      description: "安全合规",
+      enabled: Boolean(state.requestId && state.analysisId),
+      done: Boolean(state.complianceResult),
     },
   ];
 
@@ -69,7 +77,7 @@ export function WorkspaceLayout(): JSX.Element {
         <div>
           <p className={styles.eyebrow}>玩具出海智能助手</p>
           <h1 className="neon-title">全球玩具改款实验室</h1>
-          <p className={`muted ${styles.subline}`}>线性三步，自动衔接。</p>
+          <p className={`muted ${styles.subline}`}>线性四步，自动衔接。</p>
         </div>
         <button className={styles.resetButton} type="button" onClick={handleReset}>
           重新开始
