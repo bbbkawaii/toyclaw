@@ -114,7 +114,6 @@ class PreviewFailingImageProvider implements ImageGenerationProvider {
   }
 }
 
-
 class ReferenceSensitiveImageProvider implements ImageGenerationProvider {
   readonly providerName = "reference-sensitive";
   readonly modelName = "reference-sensitive-v1";
@@ -497,15 +496,17 @@ describe("redesign routes", () => {
     // Preview call uses the original uploaded image as reference
     const previewCall = recorder.calls[0];
     expect(previewCall.prompt).toContain("hero shot");
+    expect(previewCall.referenceImageBase64).toBeDefined();
 
     // Three-view calls should use the preview output (not the original upload) as reference
-    const previewOutputBase64 = previewCall.referenceImageBase64;
+    const originalReferenceBase64 = previewCall.referenceImageBase64;
+    const previewOutputBase64 = redesignPayload.assets.previewImage.imageBase64;
+    expect(previewOutputBase64).toBeDefined();
     const threeViewCalls = recorder.calls.slice(1);
     expect(threeViewCalls).toHaveLength(3);
     for (const call of threeViewCalls) {
-      expect(call.referenceImageBase64).not.toBe(previewOutputBase64);
-      // The reference should be the preview output base64, not the original image
-      expect(call.referenceImageBase64).toBeDefined();
+      expect(call.referenceImageBase64).toBe(previewOutputBase64);
+      expect(call.referenceImageBase64).not.toBe(originalReferenceBase64);
     }
 
     // Prompts should contain the consistency requirement (referenceIsRedesign=true)
@@ -583,11 +584,15 @@ describe("redesign routes", () => {
     expect(redesignPayload.assets.previewImage.status).toBe("FAILED");
     expect(redesignPayload.assets.threeView.front.status).toBe("READY");
 
+    const originalReferenceBase64 = recorder.calls[0]?.referenceImageBase64;
+    expect(originalReferenceBase64).toBeDefined();
+
     // When preview failed, three-view prompts should use the fallback wording
     // (referenceIsRedesign=false → "original toy before redesign")
     const threeViewCalls = recorder.calls.filter((c) => c.prompt.includes("view technical render"));
-    expect(threeViewCalls.length).toBeGreaterThanOrEqual(3);
+    expect(threeViewCalls).toHaveLength(3);
     for (const call of threeViewCalls) {
+      expect(call.referenceImageBase64).toBe(originalReferenceBase64);
       expect(call.prompt).toContain("original toy before redesign");
       expect(call.prompt).not.toContain("finalized redesign");
     }
