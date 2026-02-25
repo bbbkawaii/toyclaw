@@ -21,7 +21,7 @@ export function LandingPage(): JSX.Element {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-20 opacity-0 animate-fade-in-up" style={{ animationDelay: "1s" }}>
             <Link
-              to="/workflow/step1"
+              to="/home"
               className="w-full sm:w-auto px-8 py-4 bg-primary text-white font-bold rounded-2xl hover:bg-primary-dark shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 no-underline text-center"
             >
               立即开始创作
@@ -120,8 +120,8 @@ export function LandingPage(): JSX.Element {
               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32" />
               <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
                 <div className="w-full md:w-1/3">
-                  <div className="aspect-square bg-gray-200 rounded-3xl overflow-hidden shadow-2xl rotate-3 flex items-center justify-center">
-                    <i className="fas fa-image text-6xl text-gray-300" />
+                  <div className="aspect-square bg-gray-200 rounded-3xl overflow-hidden shadow-2xl rotate-3">
+                    <img src="/showcase-japan-plush.jpg" alt="日本毛绒市场出海案例" className="w-full h-full object-cover" />
                   </div>
                 </div>
                 <div className="w-full md:w-2/3">
@@ -151,7 +151,7 @@ export function LandingPage(): JSX.Element {
               <h2 className="text-4xl md:text-5xl font-bold mb-8">准备好让您的玩具走向全球了吗？</h2>
               <p className="text-white/80 text-xl mb-12">立即加入先行计划，获取免费的文化分析报告与 AI 方案生成额度。</p>
               <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-                <Link to="/workflow/step1" className="px-10 py-5 bg-white text-primary font-bold rounded-2xl hover:bg-surface transition-all transform hover:scale-105 shadow-xl no-underline">
+                <Link to="/home" className="px-10 py-5 bg-white text-primary font-bold rounded-2xl hover:bg-surface transition-all transform hover:scale-105 shadow-xl no-underline">
                   免费试用 7 天
                 </Link>
                 <button className="px-10 py-5 bg-transparent border-2 border-white/30 text-white font-bold rounded-2xl hover:bg-white/10 transition-all">
@@ -210,11 +210,15 @@ export function LandingPage(): JSX.Element {
             </button>
             <div className="p-8 md:p-12">
               <h3 className="text-2xl font-bold mb-6">了解 ToyBridge AI 如何工作</h3>
-              <div className="aspect-video bg-gray-900 rounded-2xl flex items-center justify-center relative cursor-pointer">
-                <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-2xl animate-pulse">
-                  <i className="fas fa-play" />
-                </div>
-                <span className="absolute bottom-6 text-white/50 text-sm">点击预览视频功能 (演示环境)</span>
+              <div className="aspect-video bg-gray-900 rounded-2xl overflow-hidden">
+                <video
+                  src="/demo-video.mp4"
+                  controls
+                  autoPlay
+                  className="w-full h-full object-contain"
+                >
+                  您的浏览器不支持视频播放
+                </video>
               </div>
               <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-6">
                 {[
