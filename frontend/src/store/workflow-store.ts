@@ -4,9 +4,10 @@ import type {
   ComplianceAssessmentResponse,
   CrossCulturalAnalysisResponse,
   RedesignSuggestionResponse,
+  TargetMarket,
 } from "../shared/types/api";
 
-export type WorkflowStep = "image-input" | "cross-cultural" | "redesign" | "compliance";
+export type WorkflowStep = "step1" | "step2" | "step3";
 
 interface WorkflowState {
   step: WorkflowStep;
@@ -14,37 +15,56 @@ interface WorkflowState {
   analysisId?: string;
   suggestionId?: string;
   complianceId?: string;
+  targetMarket?: TargetMarket;
   imageResult?: AnalyzeResponse;
   crossCulturalResult?: CrossCulturalAnalysisResponse;
   redesignResult?: RedesignSuggestionResponse;
   complianceResult?: ComplianceAssessmentResponse;
+  complianceAvailable: boolean;
   setStep: (step: WorkflowStep) => void;
+  setTargetMarket: (market: TargetMarket) => void;
   setImageResult: (value: AnalyzeResponse) => void;
   setCrossCulturalResult: (value: CrossCulturalAnalysisResponse) => void;
   setRedesignResult: (value: RedesignSuggestionResponse) => void;
   setComplianceResult: (value: ComplianceAssessmentResponse) => void;
+  setComplianceAvailable: (available: boolean) => void;
   reset: () => void;
 }
 
 const initialState: Pick<
   WorkflowState,
-  "step" | "requestId" | "analysisId" | "suggestionId" | "complianceId" | "imageResult" | "crossCulturalResult" | "redesignResult" | "complianceResult"
+  | "step"
+  | "requestId"
+  | "analysisId"
+  | "suggestionId"
+  | "complianceId"
+  | "targetMarket"
+  | "imageResult"
+  | "crossCulturalResult"
+  | "redesignResult"
+  | "complianceResult"
+  | "complianceAvailable"
 > = {
-  step: "image-input",
+  step: "step1",
   requestId: undefined,
   analysisId: undefined,
   suggestionId: undefined,
   complianceId: undefined,
+  targetMarket: undefined,
   imageResult: undefined,
   crossCulturalResult: undefined,
   redesignResult: undefined,
   complianceResult: undefined,
+  complianceAvailable: false,
 };
 
 export const useWorkflowStore = create<WorkflowState>((set) => ({
   ...initialState,
   setStep: (step) => {
     set({ step });
+  },
+  setTargetMarket: (market) => {
+    set({ targetMarket: market });
   },
   setImageResult: (value) => {
     set({
@@ -62,7 +82,6 @@ export const useWorkflowStore = create<WorkflowState>((set) => ({
     set({
       crossCulturalResult: value,
       analysisId: value.analysisId,
-      step: "cross-cultural",
       redesignResult: undefined,
       suggestionId: undefined,
       complianceResult: undefined,
@@ -81,8 +100,10 @@ export const useWorkflowStore = create<WorkflowState>((set) => ({
       complianceId: value.assessmentId,
     });
   },
+  setComplianceAvailable: (available) => {
+    set({ complianceAvailable: available });
+  },
   reset: () => {
     set(initialState);
   },
 }));
-

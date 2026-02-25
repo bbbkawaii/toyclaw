@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-[10px] border border-white/30 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.04)];
+  }
+
+  .glass-nav {
+    @apply bg-white/80 backdrop-blur-[16px] border-b border-black/5;
+  }
+
+  .mesh-gradient {
+    background-color: #FFF8F0;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(111, 143, 122, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(111, 143, 122, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(111, 143, 122, 0.05) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(111, 143, 122, 0.1) 0px, transparent 50%);
+  }
+
+  .mesh-gradient-hero {
+    background-color: #FFF8F0;
+    background-image:
+      radial-gradient(at 0% 0%, hsla(141, 14%, 50%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(204, 22%, 47%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(141, 14%, 50%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(135, 21%, 89%, 0.3) 0px, transparent 50%);
+  }
+
+  .mesh-gradient-footer {
+    background-color: #0F1419;
+    background-image:
+      radial-gradient(at 0% 0%, hsla(141, 14%, 50%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 80% 20%, hsla(204, 22%, 47%, 0.1) 0px, transparent 50%);
+  }
+
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

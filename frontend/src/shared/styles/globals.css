@@ -12,23 +12,12 @@ body,
 }
 
 body {
-  font-family: var(--font-body);
-  color: var(--ink);
-  background: var(--bg-base);
+  font-family: "Noto Sans SC", "Inter", system-ui, -apple-system, sans-serif;
+  color: #0F1419;
+  background: #FFF8F0;
   line-height: 1.45;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 34px 34px;
-  opacity: 0.15;
-  z-index: -2;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -42,83 +31,15 @@ select {
   font: inherit;
 }
 
-.app-shell {
-  width: min(1320px, calc(100% - 40px));
-  margin: 20px auto 34px;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 16px;
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-.neon-title {
-  margin: 0;
-  font-family: var(--font-display);
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  font-size: clamp(1.28rem, 2vw + 0.9rem, 2.14rem);
-  border-bottom: 2px solid var(--accent-1);
-  display: inline-block;
-  padding-bottom: 4px;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.muted {
-  color: var(--ink-soft);
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 6px 11px;
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
-  font-size: 0.78rem;
-  font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-}
-
-.grid-two {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.tag-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag-list li {
-  border-radius: 999px;
-  padding: 4px 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  font-size: 0.76rem;
-  color: var(--ink-soft);
-}
-
-.kbd {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.07em;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 2px 6px;
-  background: var(--panel);
-}
-
-@media (max-width: 900px) {
-  .app-shell {
-    width: min(1320px, calc(100% - 24px));
-    margin-top: 14px;
-  }
-
-  .grid-two {
-    grid-template-columns: 1fr;
-  }
+::-webkit-scrollbar-thumb {
+  background: #DCE8DF;
+  border-radius: 10px;
 }
