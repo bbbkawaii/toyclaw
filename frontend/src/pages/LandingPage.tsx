@@ -1,9 +1,25 @@
-import { useState, type JSX } from "react";
+import { useState, useEffect, type JSX } from "react";
 import { Link } from "react-router-dom";
 import { AppHeader } from "../shared/ui/AppHeader";
 
+const showcaseSlides = [
+  { src: "/showcase/original.png", label: "原始玩具", desc: "上传原始产品图片" },
+  { src: "/showcase/preview.jpg", label: "AI 改款预览", desc: "智能生成改款效果图" },
+  { src: "/showcase/front.jpg", label: "正面图", desc: "三视图 · 正面视角" },
+  { src: "/showcase/side.jpg", label: "侧面图", desc: "三视图 · 侧面视角" },
+  { src: "/showcase/back.jpg", label: "背面图", desc: "三视图 · 背面视角" },
+];
+
 export function LandingPage(): JSX.Element {
   const [showModal, setShowModal] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSlideIndex((prev) => (prev + 1) % showcaseSlides.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="bg-surface overflow-x-hidden">
@@ -37,17 +53,34 @@ export function LandingPage(): JSX.Element {
           {/* Parallax card */}
           <div className="relative max-w-5xl mx-auto px-4 mt-12 opacity-0 animate-fade-in-up" style={{ animationDelay: "1.2s" }}>
             <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/20 animate-float">
-              <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group overflow-hidden">
-                <div className="relative z-10 text-center p-8">
-                  <div className="w-20 h-20 bg-white/90 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl text-primary animate-pulse">
-                    <i className="fas fa-magic text-3xl" />
-                  </div>
-                  <h4 className="text-xl font-bold text-gray-800">智能文化适配引擎</h4>
-                  <p className="text-gray-500 mt-2">实时解析区域性文化符号，自动转化为 3D 设计雏形</p>
-                </div>
+              <div className="aspect-video bg-gray-900 relative overflow-hidden">
+                {showcaseSlides.map((slide, i) => (
+                  <img
+                    key={slide.src}
+                    src={slide.src}
+                    alt={slide.label}
+                    className="absolute inset-0 w-full h-full object-contain transition-opacity duration-700"
+                    style={{ opacity: i === slideIndex ? 1 : 0 }}
+                  />
+                ))}
                 <div className="absolute top-6 left-6 bg-white/80 backdrop-blur px-4 py-2 rounded-lg shadow-sm border border-white/50 flex items-center space-x-2">
                   <div className="w-2 h-2 rounded-full bg-green-500" />
                   <span className="text-xs font-bold text-gray-600 uppercase tracking-widest">Live Analysis</span>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6 flex items-end justify-between">
+                  <div>
+                    <p className="text-white font-bold text-lg">{showcaseSlides[slideIndex].label}</p>
+                    <p className="text-white/70 text-sm">{showcaseSlides[slideIndex].desc}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {showcaseSlides.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSlideIndex(i)}
+                        className={`w-2.5 h-2.5 rounded-full transition-all ${i === slideIndex ? "bg-primary scale-125" : "bg-white/50"}`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
