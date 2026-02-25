@@ -1,6 +1,8 @@
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import Fastify, { type FastifyInstance } from "fastify";
 import { loadConfigFromEnv, type AppConfig } from "./config";
@@ -13,6 +15,8 @@ import { crossCulturalRoutes } from "./modules/cross-cultural/routes";
 import { CrossCulturalService } from "./modules/cross-cultural/service";
 import { imageInputRoutes } from "./modules/image-input/routes";
 import { ImageInputService } from "./modules/image-input/service";
+import { projectsRoutes } from "./modules/projects/routes";
+import { ProjectsService } from "./modules/projects/service";
 import { redesignRoutes } from "./modules/redesign/routes";
 import { RedesignService } from "./modules/redesign/service";
 import { GeminiEmbeddingProvider } from "./providers/embedding/gemini";
@@ -119,6 +123,14 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
     app.log.warn("Compliance module disabled: missing Gemini API key or compliance index");
   }
 
+  const projectsService = new ProjectsService({ prisma });
+
+  await app.register(fastifyStatic, {
+    root: path.resolve(config.uploadDir),
+    prefix: "/uploads/",
+    decorateReply: false,
+  });
+
   await app.register(imageInputRoutes, {
     prefix: "/api/v1/image-input",
     service: imageInputService,
@@ -130,6 +142,10 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Fastify
   await app.register(redesignRoutes, {
     prefix: "/api/v1/redesign",
     service: redesignService,
+  });
+  await app.register(projectsRoutes, {
+    prefix: "/api/v1/projects",
+    service: projectsService,
   });
 
   app.get("/healthz", async () => ({

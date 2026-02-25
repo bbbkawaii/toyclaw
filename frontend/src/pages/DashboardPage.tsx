@@ -1,12 +1,47 @@
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { Link } from "react-router-dom";
 import { AppHeader } from "../shared/ui/AppHeader";
 import { MobileBottomNav } from "../shared/ui/MobileBottomNav";
+import { useProjectStore } from "../store/project-store";
+
+const MARKET_LABELS: Record<string, string> = {
+  US: "美国",
+  EUROPE: "欧洲",
+  MIDDLE_EAST: "中东",
+  SOUTHEAST_ASIA: "东南亚",
+  JAPAN_KOREA: "日韩",
+};
+
+function formatRelativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} 天前`;
+  return new Date(iso).toLocaleDateString("zh-CN");
+}
+
+function getUploadUrl(imagePath: string): string {
+  const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api/v1";
+  const origin = base.replace(/\/api\/v1\/?$/, "");
+  return `${origin}/uploads/${imagePath}`;
+}
 
 export function DashboardPage(): JSX.Element {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMarket, setShowMarket] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
+
+  const { projects, total, loading, error, fetchProjects } = useProjectStore();
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  const uniqueMarkets = new Set(projects.flatMap((p) => p.targetMarkets));
 
   return (
     <div className="mesh-gradient min-h-screen">
@@ -70,18 +105,42 @@ export function DashboardPage(): JSX.Element {
         <div className="max-w-7xl mx-auto">
           {/* Welcome */}
           <section className="mb-10">
-            <h1 className="text-3xl md:text-4xl font-bold text-toy-text mb-2">欢迎回来，John！</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-toy-text mb-2">概览中心</h1>
             <p className="text-toy-secondary animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
-              今天我们为您筛选了 3 个具有潜力的出海设计方向。
+              {total > 0
+                ? `共有 ${total} 个设计项目，覆盖 ${uniqueMarkets.size} 个目标市场。`
+                : "还没有项目，开始你的第一个设计吧。"}
             </p>
           </section>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             {[
-              { icon: "fa-rocket", color: "primary", label: "活跃设计方案", value: "12", pct: "65%" },
-              { icon: "fa-globe", color: "accent-blue", label: "覆盖目标市场", value: "8", pct: "40%" },
-              { icon: "fa-check-double", color: "accent-gold", label: "工艺校验通过率", value: "94.2%", pct: "94%" },
+              {
+                icon: "fa-rocket",
+                color: "primary",
+                label: "设计项目总数",
+                value: String(total),
+                pct: `${Math.min(total * 8, 100)}%`,
+              },
+              {
+                icon: "fa-globe",
+                color: "accent-blue",
+                label: "覆盖目标市场",
+                value: String(uniqueMarkets.size),
+                pct: `${Math.min(uniqueMarkets.size * 20, 100)}%`,
+              },
+              {
+                icon: "fa-check-double",
+                color: "accent-gold",
+                label: "成功率",
+                value: total > 0
+                  ? `${Math.round((projects.filter((p) => p.status === "SUCCEEDED").length / projects.length) * 100)}%`
+                  : "—",
+                pct: total > 0
+                  ? `${Math.round((projects.filter((p) => p.status === "SUCCEEDED").length / projects.length) * 100)}%`
+                  : "0%",
+              },
             ].map((stat, i) => (
               <div key={stat.label} className="glass-card p-6 rounded-2xl animate-fade-in-up" style={{ animationDelay: `${0.1 * (i + 1)}s` }}>
                 <div className="flex items-center gap-4 mb-4">
@@ -104,50 +163,88 @@ export function DashboardPage(): JSX.Element {
           <section className="mb-10">
             <div className="flex justify-between items-end mb-6">
               <h2 className="text-2xl font-bold text-toy-text">最近工作项</h2>
-              <button className="text-primary text-sm font-bold hover:underline">
-                查看所有项目 <i className="fa-solid fa-arrow-right ml-1" />
-              </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {/* Project Card 1 */}
-              <div className="glass-card group p-5 rounded-2xl hover:-translate-y-2 transition-all duration-300">
-                <div className="relative rounded-xl overflow-hidden mb-4 aspect-[4/3] bg-primary-soft flex items-center justify-center">
-                  <i className="fas fa-teddy-bear text-6xl text-primary/20" />
-                  <div className="absolute top-3 left-3 px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full text-[10px] font-bold text-primary">
-                    日本市场 · 毛绒
-                  </div>
-                </div>
-                <h3 className="font-bold text-toy-text mb-1">JP_Sakura_Koala_V2</h3>
-                <p className="text-xs text-toy-secondary mb-4">基于日本樱花季文化洞察生成的治愈系考拉方案。</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-toy-secondary">最后编辑：2小时前</span>
-                  <div className="flex gap-2">
-                    <Link to="/project/mock-1" className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-dark transition-colors no-underline">
-                      继续设计
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              {/* Loading skeleton */}
+              {loading && projects.length === 0 && (
+                <>
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="glass-card p-5 rounded-2xl animate-pulse">
+                      <div className="rounded-xl mb-4 aspect-[4/3] bg-gray-200" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-200 rounded w-full mb-4" />
+                      <div className="h-3 bg-gray-200 rounded w-1/3" />
+                    </div>
+                  ))}
+                </>
+              )}
 
-              {/* Project Card 2 */}
-              <div className="glass-card group p-5 rounded-2xl hover:-translate-y-2 transition-all duration-300">
-                <div className="relative rounded-xl overflow-hidden mb-4 aspect-[4/3] bg-accent-blue/5 flex items-center justify-center">
-                  <i className="fas fa-robot text-6xl text-accent-blue/20" />
-                  <div className="absolute top-3 left-3 px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full text-[10px] font-bold text-accent-blue">
-                    美国市场 · PVC
+              {/* Error state */}
+              {error && !loading && (
+                <div className="col-span-full text-center py-12">
+                  <i className="fa-solid fa-triangle-exclamation text-4xl text-red-300 mb-4" />
+                  <p className="text-red-500 mb-2">{error}</p>
+                  <button onClick={() => fetchProjects()} className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg">
+                    重试
+                  </button>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!loading && !error && projects.length === 0 && (
+                <div className="col-span-full text-center py-16">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-6">
+                    <i className="fa-solid fa-folder-open text-3xl" />
+                  </div>
+                  <h3 className="font-bold text-toy-text text-lg mb-2">还没有项目</h3>
+                  <p className="text-toy-secondary text-sm mb-6">开始你的第一个设计，让 AI 帮你探索全球市场机会。</p>
+                  <Link to="/workflow/step1" className="px-6 py-3 bg-primary text-white font-bold rounded-xl no-underline hover:bg-primary-dark transition-colors">
+                    开始新项目
+                  </Link>
+                </div>
+              )}
+
+              {/* Project Cards */}
+              {projects.map((project) => (
+                <div key={project.requestId} className="glass-card group p-5 rounded-2xl hover:-translate-y-2 transition-all duration-300">
+                  <div className="relative rounded-xl overflow-hidden mb-4 aspect-[4/3] bg-primary-soft">
+                    <img
+                      src={getUploadUrl(project.imagePath)}
+                      alt={project.originalFilename}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
+                      {project.targetMarkets.map((m) => (
+                        <span key={m} className="px-2.5 py-1 bg-white/80 backdrop-blur-sm rounded-full text-[10px] font-bold text-primary">
+                          {MARKET_LABELS[m] || m}
+                        </span>
+                      ))}
+                    </div>
+                    {project.status !== "SUCCEEDED" && (
+                      <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        project.status === "PROCESSING"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
+                        {project.status === "PROCESSING" ? "处理中" : "失败"}
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="font-bold text-toy-text mb-1 truncate">{project.originalFilename}</h3>
+                  <p className="text-xs text-toy-secondary mb-4 line-clamp-2">{project.directionValue}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-toy-secondary">最后编辑：{formatRelativeTime(project.updatedAt)}</span>
+                    <div className="flex gap-2">
+                      <Link to={`/project/${project.requestId}`} className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-dark transition-colors no-underline">
+                        查看详情
+                      </Link>
+                    </div>
                   </div>
                 </div>
-                <h3 className="font-bold text-toy-text mb-1">US_Cyber_Mecha_Toy</h3>
-                <p className="text-xs text-toy-secondary mb-4">面向北美青少年的赛博朋克风格可动机甲玩具。</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-toy-secondary">最后编辑：1天前</span>
-                  <div className="flex gap-2">
-                    <Link to="/project/mock-2" className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-dark transition-colors no-underline">
-                      继续设计
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              ))}
 
               {/* New Project CTA */}
               <Link

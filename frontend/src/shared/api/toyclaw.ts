@@ -5,6 +5,8 @@ import type {
   ComplianceAssessmentResponse,
   CrossCulturalAnalysisResponse,
   DirectionPreset,
+  ProjectDetailResponse,
+  ProjectListResponse,
   RedesignSuggestionResponse,
   RetryableRedesignAssetKey,
   TargetMarket,
@@ -152,5 +154,27 @@ export async function getCapabilities(): Promise<CapabilitiesResponse> {
     return response.data;
   } catch {
     return { compliance: false };
+  }
+}
+
+export async function getProjects(params?: {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+}): Promise<ProjectListResponse> {
+  try {
+    const response = await apiClient.get<ProjectListResponse>("/projects", { params });
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export async function getProjectDetail(requestId: string): Promise<ProjectDetailResponse> {
+  try {
+    const response = await apiClient.get<ProjectDetailResponse>(`/projects/${requestId}`);
+    return response.data;
+  } catch (error) {
+    throw toApiError(error);
   }
 }

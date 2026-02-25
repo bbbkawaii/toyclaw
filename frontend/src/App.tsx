@@ -39,6 +39,7 @@ function App(): JSX.Element {
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/home" element={<Navigate to="/workflow/step1" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/workflow" element={<WorkflowLayout />}>
           <Route index element={<Navigate to="step1" replace />} />
